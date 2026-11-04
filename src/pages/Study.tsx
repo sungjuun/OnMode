@@ -5,6 +5,7 @@ import { configured, groups, supabase, type Group, type Ranking } from '../data/
 import { duration, percent } from '../domain/stats'
 import { useApp } from '../state/context'
 import { Card, CardTitle, Dialog, Empty, ErrorState, Field, IconBox, Loading, messageOf, PageTitle, Progress } from '../ui/base'
+import { StudyChallenges } from '../ui/StudyChallenges'
 
 type Editor = 'create' | 'invite' | 'goal' | 'leave'
 
@@ -33,6 +34,7 @@ function ConnectedStudy() {
   const [issue, setIssue] = useState('')
   const [rankIssue, setRankIssue] = useState('')
   const [live, setLive] = useState(false)
+  const [revision, setRevision] = useState(0)
   const group = list?.find(g => g.id === selected && g.role)
   const id = group?.id
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -44,6 +46,7 @@ function ConnectedStudy() {
     if (!id) return
     let active = true, sequence = 0
     const refresh = () => {
+      setRevision(n => n + 1)
       const request = ++sequence
       void groups.ranking(id, zone).then(data => {
         if (active && sequence === request) { setRank({ groupId: id, data }); setRankIssue('') }
@@ -98,6 +101,7 @@ function ConnectedStudy() {
         <div className="ranking-heading"><h2>멤버 랭킹</h2><div className="segmented"><button aria-pressed={period === 'today'} onClick={() => setPeriod('today')}>오늘</button><button aria-pressed={period === 'week'} onClick={() => setPeriod('week')}>이번 주</button></div></div>
         {rankIssue && <ErrorState message={rankIssue} />}
         {members ? <ol className="data-list">{[...members].sort((a, b) => b[period] - a[period] || a.name.localeCompare(b.name)).map((m, i) => <li key={m.id}><span className="badge">{i + 1}</span><span className="grow"><strong>{m.name}{m.role === 'owner' ? ' · 그룹장' : ''}</strong><small>{(m.focusingUntil ?? 0) > now ? '집중 중 · ' : ''}일일 목표 {percent(m.today, m.goalMinutes * 60)}%</small></span><strong>{duration(m[period])}</strong></li>)}</ol> : !rankIssue && <Loading />}
+        <StudyChallenges key={group.id} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
       </> : <Empty icon={Trophy} title="스터디를 선택하세요" description="참여 중인 스터디를 열면 공동 목표와 랭킹을 볼 수 있어요." />}</Card>
     </div>
     {editor && <Dialog close={() => setEditor(null)} title={{ create: '그룹 만들기', invite: '초대 코드로 참여', goal: '공동 목표 수정', leave: '그룹 탈퇴' }[editor]}>
