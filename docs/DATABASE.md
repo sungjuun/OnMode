@@ -7,7 +7,8 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 | 사용자 | `profiles`: 닉네임·일일 목표·알림 설정 |
 | 자격증과 공부·독서 | `certifications` → `activities`(과목 또는 도서) → `activity_journal`. 활동 종류별 필드 제약과 소유자 포함 외래키 |
 | 집중 | `focus_sessions`: 활동 연결, 시작·활성 구간·누적 시간·종료. 사용자당 미종료 세션 하나 |
-| 성장 | `reward_transactions`: 세션 적립과 아이템 지출의 원장. `items` → `user_inventory`: 보유 및 고정 위치 배치. 레벨과 초기 업적은 읽을 때 계산 |
+| 성장 | `reward_transactions`: 세션 적립과 아이템 지출의 원장. `items` → `user_inventory`: 보유 및 배치 여부. 레벨과 초기 업적은 읽을 때 계산 |
+| 방 배치 | `user_room_layouts` → `room_item_positions`: 배치 버전과 보유 아이템별 위치. 비공개 `room_item_bounds`가 이동 범위를 관리 |
 | 그룹 | `study_groups` → `group_members`, `group_updates`, `group_contributions`. 멤버십과 그룹장 제약, Realtime 버전 신호, 세션별 공동 목표 기여 |
 | 챌린지 | `study_groups` → `study_challenges`. 공동 목표, 날짜·시간대, 서버가 계산한 기간 경계, 생성·취소 시각 |
 | 공지 | `study_groups` → `group_notices`. 제목·본문, 작성·수정 시각, 동시 수정 검사용 버전 |
@@ -26,5 +27,7 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 공지 테이블은 RLS로 그룹 멤버에게만 조회를 허용하고 직접 쓰기는 차단한다. 쓰기 RPC는 활성 세션·그룹장 권한과 수정 버전을 검증한다. 생성 UUID 및 동일 내용 수정 재시도는 중복 처리하지 않는다. 조회는 `(created_at,id)` 커서와 그룹별 복합 인덱스를 사용해 같은 작성 시각에도 누락·중복 없이 페이지를 나눈다. 개인 작성자 ID를 저장하지 않는 그룹 공유 자료이며 그룹 삭제 시 함께 삭제한다. 그룹장이 탈퇴하거나 계정을 삭제해도 남은 그룹에서는 공지를 유지한다.
 
 채팅 RPC는 활성 세션과 현재 멤버십을 확인하고 발신자·시각을 서버에서 정한다. 그룹·발신자별 인덱스로 커서 조회와 전송 제한을 처리한다. 사용자 프로필 잠금으로 그룹 간 동시 전송도 직렬화하며, 같은 메시지 ID의 재시도를 먼저 확인해 중복과 제한 오차를 막는다. 삭제는 발신자 본인 또는 현재 그룹장에게 허용하고 본문을 NULL로 바꾼다. 발신자 계정에는 삭제 전파 외래키를 사용해 계정 삭제 시 해당 메시지를 제거한다. 메시지와 변경 신호 테이블 모두 RLS를 적용하고 클라이언트 직접 쓰기는 차단한다.
+
+방 배치는 기존 스냅숏·명령 API에 합쳐 읽고 저장한다. 공개 배치 테이블은 본인 조회만 RLS로 허용하고 직접 쓰기는 차단한다. 서버가 보유 여부, 이동 가능 아이템, 정수 좌표와 범위를 검사하고 현재 버전과 일치하는 변경만 한 번에 저장한다. 이미 같은 배치가 저장된 재시도는 버전을 올리지 않는다. 구매·보상은 변경하지 않으며, 숨긴 아이템의 위치는 유지하고 계정 삭제 시에는 배치도 함께 삭제한다.
 
 참고: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Data API 기본 노출 정책 변경](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [클라이언트 API 키](https://supabase.com/docs/guides/getting-started/api-keys).

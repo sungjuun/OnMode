@@ -1,6 +1,7 @@
 import { openDB, type DBSchema } from 'idb'
 import { emptySnapshot, items, totals, type Snapshot, type Command, type Repository, type BreakTimer } from '../domain/model'
 import { isDue, pause, recordFor, resume } from '../domain/timer'
+import { emptyRoom, normalizePositions, samePositions } from '../domain/room'
 
 interface OnmodeDB extends DBSchema { state: { key: string; value: Snapshot | BreakTimer } }
 let db: ReturnType<typeof openDB<OnmodeDB>> | undefined
@@ -49,18 +50,27 @@ export function applyLocal(s: Snapshot, command: Command, now: number): Snapshot
       if (!s.inventory.includes(command.id)) throw Error('보유하지 않은 아이템입니다.')
       return { ...s, placed: command.placed ? [...new Set([...s.placed, command.id])] : s.placed.filter(id => id !== command.id) }
     }
+    case 'room_layout': {
+      const positions = normalizePositions(command.positions)
+      if (Object.keys(command.positions).some(id => !s.inventory.includes(id))) throw Error('보유하지 않은 아이템입니다.')
+      if (!Number.isInteger(command.revision) || command.revision < 0) throw Error('배치 정보를 다시 불러와 주세요.')
+      if (samePositions(s.room.positions, positions)) return s
+      if (s.room.revision !== command.revision) throw Error('다른 곳에서 배치가 변경됐어요. 최신 배치를 불러와 주세요.')
+      return { ...s, room: { revision: s.room.revision + 1, positions } }
+    }
   }
 }
 export function localRepository(clock = Date.now, key = 'guest'): Repository {
   return {
     async load() {
       const state = (await (await database()).get('state', key)) as Snapshot | undefined
-      return { snapshot: state ?? emptySnapshot() }
+      return { snapshot: state ? { ...state, room: state.room ?? emptyRoom() } : emptySnapshot() }
     },
     async execute(command) {
       const tx = (await database()).transaction('state', 'readwrite')
       const current = (await tx.store.get(key)) as Snapshot | undefined
-      const snapshot = applyLocal(current ?? emptySnapshot(), command, clock())
+      const upgraded = current ? { ...current, room: current.room ?? emptyRoom() } : emptySnapshot()
+      const snapshot = applyLocal(upgraded, command, clock())
       await tx.store.put(snapshot, key)
       await tx.done
       return { snapshot }

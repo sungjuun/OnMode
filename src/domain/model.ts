@@ -1,3 +1,5 @@
+import { emptyRoom, type RoomLayout, type RoomPositions } from './room'
+
 export type Method = 'pomodoro' | 'flow' | 'deep' | 'custom'
 export type ActivityKind = 'subject' | 'book'
 export interface Profile { name: string; goalMinutes: number; notifications: boolean }
@@ -18,7 +20,7 @@ export interface FocusRecord {
 export interface BreakTimer { endAt: number; long: boolean }
 export interface Snapshot {
   profile: Profile; certifications: Certification[]; activities: Activity[]; journal: Journal[];
-  records: FocusRecord[]; timer: Timer | null; inventory: string[]; placed: string[];
+  records: FocusRecord[]; timer: Timer | null; inventory: string[]; placed: string[]; room: RoomLayout;
 }
 export interface View { snapshot: Snapshot; serverTime?: number }
 export type Command =
@@ -30,13 +32,14 @@ export type Command =
   | { type: 'pause' | 'resume' | 'finish'; id: string }
   | { type: 'buy'; id: string }
   | { type: 'place'; id: string; placed: boolean }
+  | { type: 'room_layout'; revision: number; positions: RoomPositions }
 
 export interface Repository { load(): Promise<View>; execute(command: Command): Promise<View> }
 
 export const defaultProfile: Profile = { name: '집중러', goalMinutes: 120, notifications: false }
 export const emptySnapshot = (): Snapshot => ({
   profile: { ...defaultProfile }, certifications: [], activities: [], journal: [], records: [],
-  timer: null, inventory: ['desk', 'chair'], placed: ['desk', 'chair'],
+  timer: null, inventory: ['desk', 'chair'], placed: ['desk', 'chair'], room: emptyRoom(),
 })
 
 export const items = [

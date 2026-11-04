@@ -1,0 +1,58 @@
+import { expect, test } from '@playwright/test'
+
+test('room editing supports keyboard, drag, cancellation, and persistent positions', async ({ page }, info) => {
+  await page.goto('/growth')
+  const desk = page.locator('[data-room-item="desk"]')
+  const transform = () => desk.getAttribute('transform')
+  await expect(desk).toHaveAttribute('transform', 'translate(0 0)')
+  await page.getByRole('button', { name: '배치 편집', exact: true }).click()
+  await desk.focus()
+  await desk.press('ArrowRight')
+  await desk.press('Shift+ArrowUp')
+  await expect(desk).toHaveAttribute('transform', 'translate(5 -1)')
+  await page.getByRole('button', { name: '원목 책상 왼쪽 이동', exact: true }).click()
+  await expect(desk).toHaveAttribute('transform', 'translate(-3 -1)')
+  await page.getByRole('button', { name: '기본 위치', exact: true }).click()
+  const canvas = page.getByRole('group', { name: '공부방 배치 편집', exact: true })
+  await canvas.scrollIntoViewIfNeeded()
+  const box = (await canvas.boundingBox())!
+  const start = { x: box.x + box.width * 200 / 640, y: box.y + box.height * 210 / 356 }
+  const end = { x: start.x + box.width * 80 / 640, y: start.y + box.height * 20 / 356 }
+  if (info.project.name === 'mobile') {
+    const touch = await page.context().newCDPSession(page)
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...start, id: 0 }] })
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...end, id: 0 }] })
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await touch.detach()
+  } else {
+    await page.mouse.move(start.x, start.y)
+    await page.mouse.down()
+    await page.mouse.move(end.x, end.y, { steps: 8 })
+    await page.mouse.up()
+  }
+  await expect.poll(transform).toBe('translate(80 20)')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await page.screenshot({ path: info.outputPath('room-editor.png'), scale: 'css' })
+  await page.getByRole('button', { name: '배치 저장', exact: true }).click()
+  await expect(page.getByRole('button', { name: '배치 편집', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(desk).toHaveAttribute('transform', 'translate(80 20)')
+
+  await page.getByRole('button', { name: '배치 편집', exact: true }).click()
+  await page.getByRole('button', { name: '원목 책상 오른쪽 이동', exact: true }).click()
+  await expect(desk).toHaveAttribute('transform', 'translate(88 20)')
+  await desk.focus()
+  for (let i = 0; i < 25; i++) await desk.press('ArrowRight')
+  await expect(desk).toHaveAttribute('transform', 'translate(173 20)')
+  await page.getByRole('button', { name: '취소', exact: true }).click()
+  await expect(desk).toHaveAttribute('transform', 'translate(80 20)')
+  await page.getByRole('button', { name: '원목 책상 치우기', exact: true }).click()
+  await expect(desk).toHaveCount(0)
+  await page.getByRole('button', { name: '원목 책상 배치', exact: true }).click()
+  await expect(desk).toHaveAttribute('transform', 'translate(80 20)')
+  await page.getByRole('button', { name: '배치 편집', exact: true }).click()
+  await page.getByRole('button', { name: '기본 위치', exact: true }).click()
+  await page.getByRole('button', { name: '배치 저장', exact: true }).click()
+  await page.reload()
+  await expect(desk).toHaveAttribute('transform', 'translate(0 0)')
+})

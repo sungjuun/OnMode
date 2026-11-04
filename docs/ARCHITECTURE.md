@@ -32,4 +32,6 @@ React + Vite는 웹 SPA를 만들며 Capacitor는 같은 자산을 네이티브 
 
 화면 테마는 계정 데이터와 분리한 기기 설정이다. 브라우저가 화면을 그리기 전에 저장한 선택 또는 시스템 테마를 적용한다. 공통 CSS 색상 토큰으로 화면, 입력창, 차트, 공부방 색을 바꾸며 시스템 설정 변경도 즉시 반영한다.
 
+방 배치 규칙은 `src/domain/room.ts`에서 관리한다. 화면의 드래그 좌표는 SVG 좌표로 변환하므로 화면 크기에 따라 저장 위치가 달라지지 않는다. 편집 중에는 초안만 변경하고 저장 시 Repository 명령 하나로 반영한다. IndexedDB의 기존 기록에 방 정보가 없으면 빈 배치·버전 0을 더해 읽으며 원래 자료는 유지한다. 계정 모드는 기존 명령 처리를 감싼 함수에서 배치 정보를 추가하고, 서버 범위·소유권·버전 검사로 충돌과 임의 좌표 요청을 막는다.
+
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).

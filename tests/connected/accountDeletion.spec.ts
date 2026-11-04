@@ -28,6 +28,7 @@ test('deletion requires a fresh password and removes personal records while tran
     }
     const groupId = await createGroup('계정 삭제 이관 테스트')
     const soloId = await createGroup('계정 삭제 빈 그룹 테스트')
+    dataOf(await owner.rpc('onmode_command', { command: { type: 'room_layout', revision: 0, positions: { desk: { x: 20, y: 10 } } } }))
     const invite = dataOf(await owner.rpc('onmode_groups')).find((g: { id: string }) => g.id === groupId).inviteCode
     dataOf(await member.rpc('onmode_group_change', { action: 'invite', payload: { code: invite } }))
     const noticeId = randomUUID(), soloNoticeId = randomUUID()
@@ -76,7 +77,7 @@ test('deletion requires a fresh password and removes personal records while tran
     await page.goto('/my')
     await expect(page.getByRole('heading', { name: '체험 기록 보존' })).toBeVisible()
 
-    for (const table of ['auth.sessions', 'public.profiles', 'public.focus_sessions', 'public.reward_transactions', 'public.group_members']) {
+    for (const table of ['auth.sessions', 'public.profiles', 'public.focus_sessions', 'public.reward_transactions', 'public.group_members', 'public.user_room_layouts', 'public.room_item_positions']) {
       expect(sql("select count(*) from " + table + " where user_id = '" + ownerId + "'")).toBe('0')
     }
     expect(sql("select count(*) from auth.users where id = '" + ownerId + "'")).toBe('0')
