@@ -39,7 +39,7 @@ export function Library() {
     if (success) close()
   }
 
-  const add = <button className="btn btn-primary" onClick={() => setEditor({ kind: books ? 'book' : 'certification' })}><Plus size={17} />{books ? '도서 등록' : '자격증 등록'}</button>
+  const add = <button className="btn btn-primary" onClick={() => setEditor({ kind: books ? 'book' : 'certification' })}><Plus size={17} />{books ? '도서 등록' : '등록'}</button>
   function activityRow(a: Activity) {
     const book = a.kind === 'book'
     const progress = book ? percent(a.currentPage ?? 0, a.pages ?? 0) : percent(recordsFor(a), (a.goalMinutes ?? 0) * 60)
@@ -54,8 +54,8 @@ export function Library() {
   }
 
   return <div className="page-stack">
-    <PageTitle label="MY LIBRARY" title="학습·독서" description="자격증 준비와 독서 진도를 한곳에서 관리하세요." action={add} />
-    <div className="segmented" aria-label="활동 유형"><button aria-pressed={!books} onClick={() => setParams({})}><GraduationCap size={17} />자격증 공부</button><button aria-pressed={books} onClick={() => setParams({ tab: 'books' })}><BookOpen size={17} />나의 서재</button></div>
+    <PageTitle label="MY LIBRARY" title="학습·독서" description="개인공부와 독서 진도를 한곳에서 관리하세요." action={add} />
+    <div className="segmented" aria-label="활동 유형"><button aria-pressed={!books} onClick={() => setParams({})}><GraduationCap size={17} />나의 공부</button><button aria-pressed={books} onClick={() => setParams({ tab: 'books' })}><BookOpen size={17} />나의 서재</button></div>
     {books ? bookList.length ? <div className="grid gap-4 md:grid-cols-2">{bookList.map(a => <Card key={a.id}>{activityRow(a)}</Card>)}</div> : <Card><Empty icon={BookOpen} title="서재가 비어 있어요" description="읽고 싶은 책을 등록하고 한 페이지씩 쌓아보세요." /></Card>
       : s.certifications.length ? <div className="grid gap-4 lg:grid-cols-2">{s.certifications.map(c => <Card key={c.id}>
         <CardTitle icon={GraduationCap} title={c.name} sub={c.examDate + ' · ' + resultNames[c.result]} action={<span className="badge">{dDay(c.examDate, now)}</span>} />
