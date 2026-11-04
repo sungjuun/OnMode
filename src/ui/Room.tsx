@@ -2,9 +2,10 @@ import { useRef, type PointerEvent, type ReactNode } from 'react'
 import { items } from '../domain/model'
 import { constrainPosition, roomItems, roomPosition, type MovableItem, type RoomPosition, type RoomPositions } from '../domain/room'
 
-export function Room({ placed, positions = {}, editing = false, selected, onSelect, onMove }: {
+export function Room({ placed, positions = {}, editing = false, selected, onSelect, onMove, label }: {
   placed: string[]; positions?: RoomPositions; editing?: boolean; selected?: MovableItem | null;
   onSelect?: (id: MovableItem) => void; onMove?: (id: MovableItem, position: RoomPosition) => void;
+  label?: string;
 }) {
   const svg = useRef<SVGSVGElement>(null)
   const drag = useRef<{ id: MovableItem; pointer: number; start: RoomPosition; position: RoomPosition } | null>(null)
@@ -48,7 +49,7 @@ export function Room({ placed, positions = {}, editing = false, selected, onSele
       {children}
     </g>
   }
-  return <svg ref={svg} viewBox="0 0 640 356" role={editing ? 'group' : 'img'} aria-label={editing ? '공부방 배치 편집' : '아이템이 배치된 나만의 공부방'} className={'room-svg ' + (editing ? 'room-editing' : '')}
+  return <svg ref={svg} viewBox="0 0 640 356" role={editing ? 'group' : 'img'} aria-label={label ?? (editing ? '공부방 배치 편집' : '아이템이 배치된 나만의 공부방')} className={'room-svg ' + (editing ? 'room-editing' : '')}
     onPointerMove={event => {
       const active = drag.current
       if (!editing || !active || active.pointer !== event.pointerId) return

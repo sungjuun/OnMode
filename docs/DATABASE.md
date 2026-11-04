@@ -13,6 +13,7 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 | 챌린지 | `study_groups` → `study_challenges`. 공동 목표, 날짜·시간대, 서버가 계산한 기간 경계, 생성·취소 시각 |
 | 공지 | `study_groups` → `group_notices`. 제목·본문, 작성·수정 시각, 동시 수정 검사용 버전 |
 | 채팅 | `study_groups` → `group_messages`, `group_chat_updates`. 사용자 소유 메시지와 내용 없는 실시간 변경 신호 |
+| 공동 도서관 | `study_groups` → `group_library_books`, `group_library_layouts`. `group_library_imports`는 사용자별 개인 서재 연결 |
 
 모든 공개 테이블에서 RLS를 활성화한다. `authenticated`에 필요한 조회 권한만 명시적으로 부여한다. 개인 자료는 자신의 행만 읽을 수 있고, 그룹 변경 신호는 그룹 멤버만 구독할 수 있다. 그룹장만 비공개 코드 조회와 목표 수정을 할 수 있다. 그룹장이 탈퇴하면 가입 순으로 권한을 이관하고, 마지막 멤버이면 그룹을 삭제한다.
 
@@ -33,3 +34,5 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 `activities.isbn`은 선택 필드이며, 책에만 정규화된 ISBN-13을 허용한다. DB가 길이·접두사·확인 숫자를 다시 검사하고 `(user_id,isbn)` 부분 유니크 인덱스로 동시 등록도 막는다. ISBN-10 변환은 순수 도메인 규칙에서 수행하며 RPC에는 정규화된 13자리를 보낸다. 기존 사용자 잠금과 개인 활동 RLS·조회 전용 권한을 유지한다. 다른 사용자는 같은 ISBN을 자신의 서재에 등록할 수 있지만 타인의 제목·독서 기록은 읽을 수 없다. ISBN이 없던 기존 도서는 그대로 읽고 쓰며, 공개 스냅숏·명령 래퍼의 방 배치 처리도 유지한다. 추가된 비공개 검증 함수의 클라이언트 실행 권한은 제거했다.
 
 참고: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Data API 기본 노출 정책 변경](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [클라이언트 API 키](https://supabase.com/docs/guides/getting-started/api-keys).
+
+공동 도서관의 공개 테이블은 RLS로 공동 목록·배치를 현재 멤버에게만, 개인 서재 연결은 본인에게만 조회 허용한다. 직접 쓰기는 차단하고 활성 Auth 세션을 확인하는 비공개 함수와 공개 invoker RPC로 처리한다. 사용자 프로필 → 그룹 순서로 잠가 탈퇴·계정 삭제·가져오기·배치를 직렬화한다. 공동 도서는 개인 자료에서 메타데이터만 복사해 원본 계정 삭제와 독립적으로 유지하며, 그룹별 ISBN 유니크 인덱스와 (created_at,id) 커서로 중복·페이지 경계를 처리한다. 공용 가구는 서버에서 정한 5종만 허용하고 정수 좌표·범위·배치 버전을 검사한다. 같은 배치 재시도는 버전을 올리지 않는다. 가져오기는 사용자별 연결 기본키와 기존 개인 ISBN을 조회해 중복을 방지한다. 그룹·공동 도서가 삭제되면 연결만 정리하고 개인 활동은 유지하며, 사용자 삭제 시 본인의 연결과 개인 활동을 함께 제거한다.

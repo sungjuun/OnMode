@@ -39,3 +39,5 @@ ISBN 검증·변환은 네트워크에 의존하지 않는 `src/domain/isbn.ts`�
 [Open Library 이용 정책](https://openlibrary.org/developers/api)은 사용자 주도의 낮은 빈도 조회를 대상으로 하며 대량 수집·상용 대규모 인프라 용도를 제한한다. 현 구현은 사용자가 입력한 ISBN의 단건 조회다. 브라우저별 요청 간격은 전체 서비스 트래픽 제한을 대신하지 않으므로 상용·대규모 출시 전 공급자 협의 또는 용도에 맞는 제공자를 결정해야 한다. 메타데이터·표지의 권리를 일괄 가정하지 않으며 [라이선스 안내](https://openlibrary.org/developers/licensing)를 따른다.
 
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).
+
+공동 도서관은 src/data/groupLibrary.ts의 전용 API를 사용하고 기존 group_updates Realtime 변경 신호와 주기 조회로 동기화한다. SharedLibraryRoom은 개인 방과 동일한 순수 좌표 규칙·SVG를 재사용하며 공용 배치 초안과 버전을 별도로 유지한다. 개인 인벤토리·코인·보상은 사용하지 않는다. StudyLibrary는 커서 페이지를 조회하고 원본 서재 도서의 명시적 공유, 그룹 목록 제거와 개인 서재 가져오기를 제공한다. 가져오기 UUID는 실패 후에도 유지하며 서버 연결 기록으로 새 요청 ID의 재시도까지 중복을 막는다. 개인 스냅숏에서 가져온 책을 확인한 뒤 집중 링크를 활성화해 활동이 로드되기 전에 자유 집중으로 시작하는 상황을 막는다. 그룹 변경·로그아웃 시 컴포넌트 상태를 초기화하며 오래된 조회 응답은 무시한다.

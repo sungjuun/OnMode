@@ -66,6 +66,12 @@ npm run test:connected
 
 `test:e2e`는 별도 포트에서 Supabase 없이 데스크톱과 모바일 Chromium을 실행합니다. `test:db`와 `test:connected`는 Docker의 ONMODE 전용 로컬 스택과 56321 API에만 연결하며, 테스트 계정과 그룹을 생성해 확인한 뒤 삭제합니다. 연결 테스트를 재현하려면 로컬 스택과 마이그레이션이 준비되어 있어야 합니다.
 
+## 공동 도서관
+
+스터디를 열면 멤버가 함께 꾸미는 공간과 공동 도서 목록을 볼 수 있습니다. **공동 배치 편집**에서 공용 가구 5개를 끌거나 키보드·방향 버튼으로 움직여 저장하세요. 다른 멤버가 먼저 저장하면 초안을 유지하고 최신 배치를 확인하도록 안내합니다. 그룹장은 **공동 도서 등록**에서 자신의 서재 도서를 골라 공유하고 제거할 수 있습니다.
+
+멤버는 **내 서재로 가져오기 → 이 책으로 집중**으로 독서를 시작합니다. 이미 등록한 ISBN은 기존 책을 사용하며, 가져온 책의 진도와 노트는 개인 서재에서 관리합니다. 그룹장이 공유한 원본은 자신의 기존 책에 연결됩니다. [모바일 다크 화면](docs/assets/shared-library.png)을 참고하세요.
+
 ## 모바일 확장
 
 [Capacitor](https://capacitorjs.com/docs/getting-started)는 같은 웹 빌드(`dist`)를 사용합니다. 모바일 개발 환경을 준비한 후 동일한 Capacitor 버전의 Android/iOS 패키지를 설치하고 `npx cap add android` 또는 macOS에서 `npx cap add ios`를 실행합니다. 다음부터는 `npm run build`와 `npx cap sync`로 동기화합니다. 네이티브 프로젝트, 알림, 이메일 인증 딥 링크는 후속 작업입니다.

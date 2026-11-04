@@ -8,6 +8,7 @@ import { Card, CardTitle, Dialog, Empty, ErrorState, Field, IconBox, Loading, me
 import { StudyChallenges } from '../ui/StudyChallenges'
 import { StudyNotices } from '../ui/StudyNotices'
 import { StudyChat } from '../ui/StudyChat'
+import { StudyLibrary } from '../ui/StudyLibrary'
 
 type Editor = 'create' | 'invite' | 'goal' | 'leave'
 
@@ -105,6 +106,7 @@ function ConnectedStudy() {
         {rankIssue && <ErrorState message={rankIssue} />}
         {members ? <ol className="data-list">{[...members].sort((a, b) => b[period] - a[period] || a.name.localeCompare(b.name)).map((m, i) => <li key={m.id}><span className="badge">{i + 1}</span><span className="grow"><strong>{m.name}{m.role === 'owner' ? ' · 그룹장' : ''}</strong><small>{(m.focusingUntil ?? 0) > now ? '집중 중 · ' : ''}일일 목표 {percent(m.today, m.goalMinutes * 60)}%</small></span><strong>{duration(m[period])}</strong></li>)}</ol> : !rankIssue && <Loading />}
         <StudyChallenges key={group.id} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
+        <StudyLibrary key={group.id + ':library'} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
         <StudyChat key={group.id + ':chat'} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
       </> : <Empty icon={Trophy} title="스터디를 선택하세요" description="참여 중인 스터디를 열면 공동 목표와 랭킹을 볼 수 있어요." />}</Card>
     </div>

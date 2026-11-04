@@ -32,6 +32,14 @@ test('deletion requires a fresh password and removes personal records while tran
     const invite = dataOf(await owner.rpc('onmode_groups')).find((g: { id: string }) => g.id === groupId).inviteCode
     dataOf(await member.rpc('onmode_group_change', { action: 'invite', payload: { code: invite } }))
     const noticeId = randomUUID(), soloNoticeId = randomUUID()
+    const bookActivity = randomUUID(), sharedBook = randomUUID(), soloBook = randomUUID()
+    dataOf(await owner.rpc('onmode_command', { command: { type: 'activity', value: { id: bookActivity, kind: 'book', name: '그룹 공유 도서', author: '공유 저자', pages: 200, currentPage: 80, goalPages: 10 } } }))
+    for (const [gid, id] of [[groupId, sharedBook], [soloId, soloBook]]) {
+      dataOf(await owner.rpc('onmode_library_change', { group_id: gid, action: 'create', payload: { id, activityId: bookActivity } }))
+      dataOf(await owner.rpc('onmode_library_change', { group_id: gid, action: 'layout', payload: { revision: 0, positions: { shelf: { x: 10, y: 0 } } } }))
+    }
+    dataOf(await owner.rpc('onmode_library_change', { group_id: groupId, action: 'import', payload: { id: sharedBook, activityId: randomUUID() } }))
+    const memberBook = dataOf(await member.rpc('onmode_library_change', { group_id: groupId, action: 'import', payload: { id: sharedBook, activityId: randomUUID() } })).id
     for (const [gid, id] of [[groupId, noticeId], [soloId, soloNoticeId]]) {
       dataOf(await owner.rpc('onmode_notice_change', { group_id: gid, action: 'create', payload: { id, title: '공유 운영 규칙', body: '함께 정한 그룹 규칙입니다.' } }))
       dataOf(await owner.rpc('onmode_chat_change', { group_id: gid, action: 'send', payload: { id: randomUUID(), body: '내 계정의 대화' } }))
@@ -77,15 +85,24 @@ test('deletion requires a fresh password and removes personal records while tran
     await page.goto('/my')
     await expect(page.getByRole('heading', { name: '체험 기록 보존' })).toBeVisible()
 
-    for (const table of ['auth.sessions', 'public.profiles', 'public.focus_sessions', 'public.reward_transactions', 'public.group_members', 'public.user_room_layouts', 'public.room_item_positions']) {
+    for (const table of ['auth.sessions', 'public.profiles', 'public.activities', 'public.focus_sessions', 'public.reward_transactions', 'public.group_members', 'public.user_room_layouts', 'public.room_item_positions', 'public.group_library_imports']) {
       expect(sql("select count(*) from " + table + " where user_id = '" + ownerId + "'")).toBe('0')
     }
     expect(sql("select count(*) from auth.users where id = '" + ownerId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_messages where sender_id = '" + ownerId + "'")).toBe('0')
     expect(sql("select count(*) from public.study_groups where id = '" + soloId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_notices where id = '" + soloNoticeId + "'")).toBe('0')
+    expect(sql("select count(*) from public.group_library_books where id = '" + soloBook + "'")).toBe('0')
+    expect(sql("select count(*) from public.group_library_layouts where group_id = '" + soloId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_contributions where session_id = '" + focusId + "'")).toBe('0')
     expect((await owner.rpc('onmode_snapshot')).error?.code).toBe('42501')
+    expect((await owner.rpc('onmode_library', { group_id: groupId })).error?.code).toBe('42501')
+    expect(dataOf(await member.rpc('onmode_library', { group_id: groupId }))).toMatchObject({
+      room: { revision: 1, positions: { shelf: { x: 10, y: 0 } } },
+      books: [{ id: sharedBook, name: '그룹 공유 도서', myActivityId: memberBook }],
+    })
+    expect(dataOf(await member.rpc('onmode_snapshot')).snapshot.activities).toMatchObject([{ id: memberBook, currentPage: 0 }])
+    dataOf(await member.rpc('onmode_library_change', { group_id: groupId, action: 'delete', payload: { id: sharedBook } }))
     const remaining = dataOf(await member.rpc('onmode_groups')).find((g: { id: string }) => g.id === groupId)
     expect(remaining).toMatchObject({ role: 'owner', members: 1 })
     expect(dataOf(await member.rpc('onmode_notices', { group_id: groupId }))).toMatchObject([{ id: noticeId, body: '함께 정한 그룹 규칙입니다.' }])

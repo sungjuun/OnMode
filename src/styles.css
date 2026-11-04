@@ -270,6 +270,10 @@ h3 { font-weight: 750; font-size: 14px; }
 .book-search { padding-bottom:18px; border-bottom:1px solid var(--line); }
 .book-match { display:grid; gap:9px; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow-wrap:anywhere; }
 .book-match>.btn { justify-self:start; }.book-match h3 { font-size:15px; }.book-match p { font-size:13px; }
+.study-library { margin-top:24px; border-top:1px solid var(--line); padding-top:20px; }
+.shared-library-room { margin-block:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--soft-subtle); }
+.shared-books { display:grid; gap:10px; }.shared-book { padding:13px; border:1px solid var(--line); border-radius:10px; overflow-wrap:anywhere; }
+.shared-book>p { margin-top:5px; font-size:13px; }.shared-book .row-actions { margin-top:10px; }
 .appearance-picker { margin-top:15px; border:1px solid var(--line); border-radius:11px; padding:0 12px 11px; }
 .appearance-picker legend { padding-inline:5px; font-size:13px; font-weight:760; }
 .appearance-picker .segmented { margin-top:8px; }
