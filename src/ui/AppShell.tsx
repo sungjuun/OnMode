@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useApp } from '../state/context'
 import { ErrorState, Loading } from './base'
 import { levelFor, totals } from '../domain/model'
+import { recoveryPath } from '../data/supabase'
 
 const navigation = [
   { to: '/', name: '홈', icon: LayoutDashboard },
@@ -23,7 +24,7 @@ function Nav({ mobile = false }: { mobile?: boolean }) {
   </nav>
 }
 export function AppShell() {
-  const { snapshot, issue, reload, session } = useApp()
+  const { authReady, snapshot, issue, reload, session } = useApp()
   const { pathname } = useLocation()
   const active = navigation.find(n => n.to === pathname)
   const name = snapshot?.profile.name ?? '집중러'
@@ -38,13 +39,13 @@ export function AppShell() {
       </div>
     </aside>
     <div className="app-body">
-      <header className="topbar"><div className="top-desktop"><span>내 워크스페이스</span><ChevronRight size={13} /><strong>{pathname === '/library' ? '학습·독서' : pathname === '/account' ? '계정' : active?.name ?? '온모드'}</strong></div>
+      <header className="topbar"><div className="top-desktop"><span>내 워크스페이스</span><ChevronRight size={13} /><strong>{pathname === '/library' ? '학습·독서' : pathname === '/account' || pathname === recoveryPath ? '계정' : active?.name ?? '온모드'}</strong></div>
         <div className="top-mobile"><Brand /></div>
         <div className="top-actions"><Link to="/library" className="btn btn-quiet header-library"><BookOpen size={16} />학습·독서</Link><Link to={session ? '/my' : '/account'} className="mode-chip"><i />{session ? '계정 연결됨' : '로컬 체험 모드'}</Link></div>
       </header>
       <main id="main-content" className="main" tabIndex={-1}>
         {issue && <ErrorState message={issue} retry={reload} />}
-        {snapshot || pathname === '/account' ? <Outlet /> : !issue && <Loading />}
+        {snapshot || pathname === '/account' || (authReady && pathname === recoveryPath) ? <Outlet /> : !issue && <Loading />}
       </main>
       <footer className="app-footer"><span>ONMODE</span> 집중을 켜다, 성장을 쌓다.</footer>
     </div>

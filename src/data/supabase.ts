@@ -4,7 +4,30 @@ import type { Command, Repository, View } from '../domain/model'
 const url = import.meta.env.VITE_SUPABASE_URL?.trim()
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()
 export const configured = Boolean(url && key?.startsWith('sb_publishable_'))
-export const supabase = configured ? createClient(url!, key!) : null
+export const recoveryPath = '/account/recovery'
+export const supabase = configured ? createClient(url!, key!, {
+  auth: { detectSessionInUrl: window.location.pathname !== recoveryPath },
+}) : null
+
+export function createRecoveryAuth() {
+  if (!configured) throw Error('Supabase 연결이 필요합니다.')
+  // Keep the PKCE verifier across the email navigation. Never persist a recovery session.
+  const memory = new Map<string, string>()
+  return createClient(url!, key!, {
+    auth: {
+      flowType: 'pkce',
+      storageKey: 'onmode-recovery:' + new URL(url!).host,
+      persistSession: true,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storage: {
+        getItem: id => id.endsWith('-code-verifier') ? localStorage.getItem(id) : memory.get(id) ?? null,
+        setItem: (id, value) => { if (id.endsWith('-code-verifier')) localStorage.setItem(id, value); else memory.set(id, value) },
+        removeItem: id => { if (id.endsWith('-code-verifier')) localStorage.removeItem(id); else memory.delete(id) },
+      },
+    },
+  }).auth
+}
 
 export async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!supabase) throw Error('Supabase 연결이 필요합니다.')

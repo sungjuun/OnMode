@@ -24,4 +24,6 @@ React + Vite는 웹 SPA를 만들며 Capacitor는 같은 자산을 네이티브 
 
 스터디는 변경 신호만 Realtime으로 보낸다. 랭킹은 멤버 권한을 다시 확인하는 RPC로 읽는다. 연결이 끊기면 20초마다 재조회한다. 원격 메시지, 클라이언트 시간, 클라이언트 보상 값을 인증 판단에 쓰지 않는다.
 
+웹 비밀번호 재설정은 앱 로그인과 분리한 [Supabase Auth PKCE 흐름](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail)을 사용한다. 재설정 요청 브라우저에는 교환에 필요한 검증값만 저장한다. 콜백의 일회용 코드는 즉시 주소에서 지우고, 교환한 세션은 비밀번호 변경 화면의 메모리에만 둔다. 변경 성공 또는 화면을 벗어날 때 그 세션을 종료한다. 네이티브 앱용 복구 딥 링크는 모바일 베타에서 다룬다.
+
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).

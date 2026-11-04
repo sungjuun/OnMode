@@ -31,6 +31,10 @@ npx supabase@3.0.0 status
 
 `.env.example`을 `.env.local`로 복사하고 API URL과 **Publishable key**를 입력한 다음 Vite를 다시 실행하세요. `sb_secret_…`이나 service_role 키는 입력하지 마세요. 로컬 설정은 테스트를 위해 이메일 확인을 생략합니다. 호스팅 환경에서는 이메일 확인과 리디렉션 URL을 설정하세요. 로컬 체험 기록과 계정 기록은 별도로 보관됩니다.
 
+**비밀번호 재설정:** 계정 화면에서 **비밀번호를 잊었나요?**를 누르세요. 로컬 개발에서는 실제 이메일 대신 [Mailpit](http://127.0.0.1:56324/)에 링크가 도착합니다. 요청할 때 사용한 브라우저와 사이트 주소에서 링크를 열고 새 비밀번호를 설정하세요. 메일을 연 뒤 페이지를 새로고침하거나 닫았다면 다시 요청해야 합니다.
+
+운영 전에는 Supabase Auth의 **Site URL**을 앱 주소로 설정하고, 동일한 도메인의 정확한 `/account/recovery` URL을 [리디렉션 허용 목록](https://supabase.com/docs/guides/auth/redirect-urls)에 추가하세요. 재설정 메일 템플릿에서 `{{ .ConfirmationURL }}`을 사용하고 운영 SMTP로 실제 수신과 재로그인을 검증하세요.
+
 운영 환경을 연결할 때는 승인된 Supabase 프로젝트에 [마이그레이션](supabase/migrations)과 환경변수를 적용하고, Vercel의 Vite 설정으로 `dist`를 배포할 수 있습니다. SPA 경로는 [vercel.json](vercel.json)에서 처리합니다. 이 저장소에는 원격 프로젝트 주소나 키를 포함하지 않습니다.
 
 ## 검증

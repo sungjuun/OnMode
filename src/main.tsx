@@ -13,6 +13,8 @@ import { Growth } from './pages/Growth'
 import { My } from './pages/My'
 import { Library } from './pages/Library'
 import { Account } from './pages/Account'
+import { PasswordRecovery } from './pages/PasswordRecovery'
+import { recoveryPath } from './data/supabase'
 
 const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter
 createRoot(document.getElementById('root')!).render(<Router><AppProvider><Routes>
@@ -24,6 +26,7 @@ createRoot(document.getElementById('root')!).render(<Router><AppProvider><Routes
     <Route path="my" element={<My />} />
     <Route path="library" element={<Library />} />
     <Route path="account" element={<Account />} />
+    {!Capacitor.isNativePlatform() && <Route path={recoveryPath} element={<PasswordRecovery />} />}
     <Route path="*" element={<Navigate to="/" replace />} />
   </Route>
 </Routes></AppProvider></Router>)
