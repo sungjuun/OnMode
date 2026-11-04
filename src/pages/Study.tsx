@@ -6,6 +6,7 @@ import { duration, percent } from '../domain/stats'
 import { useApp } from '../state/context'
 import { Card, CardTitle, Dialog, Empty, ErrorState, Field, IconBox, Loading, messageOf, PageTitle, Progress } from '../ui/base'
 import { StudyChallenges } from '../ui/StudyChallenges'
+import { StudyNotices } from '../ui/StudyNotices'
 
 type Editor = 'create' | 'invite' | 'goal' | 'leave'
 
@@ -98,6 +99,7 @@ function ConnectedStudy() {
         <div className="metric-line"><strong>{duration(groupWeek)}</strong><span>/ {duration(group.goalMinutes * 60)} · 주간 공동 목표</span></div><Progress label="주간 공동 목표" value={percent(groupWeek, group.goalMinutes * 60)} />
         <p className="muted mt-3 text-sm">그룹 누적 {ranking ? duration(ranking.total) : '—'}{group.inviteCode ? ' · 초대 코드 ' + group.inviteCode : ''}</p>
         <div className="row-actions">{group.role === 'owner' && <button className="btn btn-soft" onClick={() => setEditor('goal')}>공동 목표 수정</button>}<button className="btn btn-quiet" onClick={() => setEditor('leave')}>그룹 탈퇴</button></div>
+        <StudyNotices key={group.id + ':notices'} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
         <div className="ranking-heading"><h2>멤버 랭킹</h2><div className="segmented"><button aria-pressed={period === 'today'} onClick={() => setPeriod('today')}>오늘</button><button aria-pressed={period === 'week'} onClick={() => setPeriod('week')}>이번 주</button></div></div>
         {rankIssue && <ErrorState message={rankIssue} />}
         {members ? <ol className="data-list">{[...members].sort((a, b) => b[period] - a[period] || a.name.localeCompare(b.name)).map((m, i) => <li key={m.id}><span className="badge">{i + 1}</span><span className="grow"><strong>{m.name}{m.role === 'owner' ? ' · 그룹장' : ''}</strong><small>{(m.focusingUntil ?? 0) > now ? '집중 중 · ' : ''}일일 목표 {percent(m.today, m.goalMinutes * 60)}%</small></span><strong>{duration(m[period])}</strong></li>)}</ol> : !rankIssue && <Loading />}

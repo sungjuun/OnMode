@@ -30,6 +30,10 @@ test('deletion requires a fresh password and removes personal records while tran
     const soloId = await createGroup('계정 삭제 빈 그룹 테스트')
     const invite = dataOf(await owner.rpc('onmode_groups')).find((g: { id: string }) => g.id === groupId).inviteCode
     dataOf(await member.rpc('onmode_group_change', { action: 'invite', payload: { code: invite } }))
+    const noticeId = randomUUID(), soloNoticeId = randomUUID()
+    for (const [gid, id] of [[groupId, noticeId], [soloId, soloNoticeId]]) {
+      dataOf(await owner.rpc('onmode_notice_change', { group_id: gid, action: 'create', payload: { id, title: '공유 운영 규칙', body: '함께 정한 그룹 규칙입니다.' } }))
+    }
     const focusId = randomUUID()
     dataOf(await owner.rpc('onmode_command', { command: { type: 'start', value: { id: focusId, method: 'flow', activityId: null, targetSeconds: null, restSeconds: 0 } } }))
     sql("update public.focus_sessions set active_since = active_since - interval '65 seconds' where id = '" + focusId + "'")
@@ -74,10 +78,12 @@ test('deletion requires a fresh password and removes personal records while tran
     }
     expect(sql("select count(*) from auth.users where id = '" + ownerId + "'")).toBe('0')
     expect(sql("select count(*) from public.study_groups where id = '" + soloId + "'")).toBe('0')
+    expect(sql("select count(*) from public.group_notices where id = '" + soloNoticeId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_contributions where session_id = '" + focusId + "'")).toBe('0')
     expect((await owner.rpc('onmode_snapshot')).error?.code).toBe('42501')
     const remaining = dataOf(await member.rpc('onmode_groups')).find((g: { id: string }) => g.id === groupId)
     expect(remaining).toMatchObject({ role: 'owner', members: 1 })
+    expect(dataOf(await member.rpc('onmode_notices', { group_id: groupId }))).toMatchObject([{ id: noticeId, body: '함께 정한 그룹 규칙입니다.' }])
     expect(dataOf(await member.rpc('onmode_ranking', { group_id: groupId, zone: 'Asia/Seoul' }))).toMatchObject({
       total: 0, members: [{ id: memberId, role: 'owner' }],
     })

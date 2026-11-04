@@ -21,7 +21,7 @@ export function DeleteAccountDialog({ user, close, complete }: {
     finally { setBusy(false) }
   }
   return <Dialog title="계정 영구 삭제" close={() => { if (!busy) close() }}>
-    <p className="muted mt-3 text-sm">집중 기록, 학습·독서 기록, 보상, 그룹에 기여한 시간이 삭제됩니다. 그룹장은 다음 멤버에게 넘어가며, 혼자 남은 그룹은 삭제됩니다. 이 브라우저의 체험 기록은 계속 사용할 수 있습니다.</p>
+    <p className="muted mt-3 text-sm">집중 기록, 학습·독서 기록, 보상, 그룹에 기여한 시간이 삭제됩니다. 그룹장은 다음 멤버에게 넘어가며, 공유 그룹의 공지는 남습니다. 혼자 남은 그룹은 삭제됩니다. 이 브라우저의 체험 기록은 계속 사용할 수 있습니다.</p>
     <form className="form-stack" onSubmit={e => void submit(e)}>
       {issue && <ErrorState message={issue} />}
       <Field label="현재 비밀번호"><input name="password" type="password" required autoComplete="current-password" disabled={busy} /></Field>
