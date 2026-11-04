@@ -6,7 +6,7 @@ export interface Profile { name: string; goalMinutes: number; notifications: boo
 export interface Certification { id: string; name: string; examDate: string; result: 'pending' | 'passed' | 'failed' }
 export interface Activity {
   id: string; kind: ActivityKind; name: string; certificationId?: string;
-  goalMinutes?: number; author?: string; pages?: number; currentPage?: number; goalPages?: number;
+  goalMinutes?: number; author?: string; pages?: number; currentPage?: number; goalPages?: number; isbn?: string;
 }
 export interface Journal { id: string; activityId: string; date: string; text: string; amount: number }
 export interface Timer {

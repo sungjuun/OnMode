@@ -30,4 +30,6 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 
 방 배치는 기존 스냅숏·명령 API에 합쳐 읽고 저장한다. 공개 배치 테이블은 본인 조회만 RLS로 허용하고 직접 쓰기는 차단한다. 서버가 보유 여부, 이동 가능 아이템, 정수 좌표와 범위를 검사하고 현재 버전과 일치하는 변경만 한 번에 저장한다. 이미 같은 배치가 저장된 재시도는 버전을 올리지 않는다. 구매·보상은 변경하지 않으며, 숨긴 아이템의 위치는 유지하고 계정 삭제 시에는 배치도 함께 삭제한다.
 
+`activities.isbn`은 선택 필드이며, 책에만 정규화된 ISBN-13을 허용한다. DB가 길이·접두사·확인 숫자를 다시 검사하고 `(user_id,isbn)` 부분 유니크 인덱스로 동시 등록도 막는다. ISBN-10 변환은 순수 도메인 규칙에서 수행하며 RPC에는 정규화된 13자리를 보낸다. 기존 사용자 잠금과 개인 활동 RLS·조회 전용 권한을 유지한다. 다른 사용자는 같은 ISBN을 자신의 서재에 등록할 수 있지만 타인의 제목·독서 기록은 읽을 수 없다. ISBN이 없던 기존 도서는 그대로 읽고 쓰며, 공개 스냅숏·명령 래퍼의 방 배치 처리도 유지한다. 추가된 비공개 검증 함수의 클라이언트 실행 권한은 제거했다.
+
 참고: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Data API 기본 노출 정책 변경](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [클라이언트 API 키](https://supabase.com/docs/guides/getting-started/api-keys).

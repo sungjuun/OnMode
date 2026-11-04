@@ -2,6 +2,7 @@ import { openDB, type DBSchema } from 'idb'
 import { emptySnapshot, items, totals, type Snapshot, type Command, type Repository, type BreakTimer } from '../domain/model'
 import { isDue, pause, recordFor, resume } from '../domain/timer'
 import { emptyRoom, normalizePositions, samePositions } from '../domain/room'
+import { normalizeIsbn } from '../domain/isbn'
 
 interface OnmodeDB extends DBSchema { state: { key: string; value: Snapshot | BreakTimer } }
 let db: ReturnType<typeof openDB<OnmodeDB>> | undefined
@@ -16,7 +17,14 @@ export function applyLocal(s: Snapshot, command: Command, now: number): Snapshot
   switch (command.type) {
     case 'profile': return { ...s, profile: command.value }
     case 'certification': return { ...s, certifications: upsert(s.certifications, command.value) }
-    case 'activity': return { ...s, activities: upsert(s.activities, command.value) }
+    case 'activity': {
+      const value = command.value
+      if (value.isbn !== undefined) {
+        if (value.kind !== 'book' || normalizeIsbn(value.isbn) !== value.isbn) throw Error('올바른 ISBN 13자리를 입력해 주세요.')
+        if (s.activities.some(a => a.id !== value.id && a.isbn === value.isbn)) throw Error('이미 서재에 등록한 ISBN입니다.')
+      }
+      return { ...s, activities: upsert(s.activities, value) }
+    }
     case 'journal': {
       if (s.journal.some(j => j.id === command.value.id)) return s
       const a = s.activities.find(item => item.id === command.value.activityId)

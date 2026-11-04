@@ -34,4 +34,8 @@ React + Vite는 웹 SPA를 만들며 Capacitor는 같은 자산을 네이티브 
 
 방 배치 규칙은 `src/domain/room.ts`에서 관리한다. 화면의 드래그 좌표는 SVG 좌표로 변환하므로 화면 크기에 따라 저장 위치가 달라지지 않는다. 편집 중에는 초안만 변경하고 저장 시 Repository 명령 하나로 반영한다. IndexedDB의 기존 기록에 방 정보가 없으면 빈 배치·버전 0을 더해 읽으며 원래 자료는 유지한다. 계정 모드는 기존 명령 처리를 감싼 함수에서 배치 정보를 추가하고, 서버 범위·소유권·버전 검사로 충돌과 임의 좌표 요청을 막는다.
 
+ISBN 검증·변환은 네트워크에 의존하지 않는 `src/domain/isbn.ts`에 둔다. `src/data/bookLookup.ts`가 [Open Library Books API](https://openlibrary.org/dev/docs/api/books)의 JSON 응답을 런타임 검사하고 메타데이터로 변환한다. 검색 버튼을 누를 때만 고정 HTTPS 주소로 요청하며, 인증 정보와 사이트 리퍼러는 보내지 않는다. 표지 이미지는 가져오지 않고 출처 링크만 제공한다. 1초 이상 요청 간격, 최대 100개·1시간 메모리 캐시, 8초 시간 제한과 취소를 적용한다. 검색어를 바꾸거나 창을 닫으면 이전 응답을 버리고, 실패해도 편집 중인 직접 입력 양식은 유지한다. 테스트는 조회 응답을 모의하며 실제 서비스 연결은 별도 수동 점검으로 확인한다.
+
+[Open Library 이용 정책](https://openlibrary.org/developers/api)은 사용자 주도의 낮은 빈도 조회를 대상으로 하며 대량 수집·상용 대규모 인프라 용도를 제한한다. 현 구현은 사용자가 입력한 ISBN의 단건 조회다. 브라우저별 요청 간격은 전체 서비스 트래픽 제한을 대신하지 않으므로 상용·대규모 출시 전 공급자 협의 또는 용도에 맞는 제공자를 결정해야 한다. 메타데이터·표지의 권리를 일괄 가정하지 않으며 [라이선스 안내](https://openlibrary.org/developers/licensing)를 따른다.
+
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).

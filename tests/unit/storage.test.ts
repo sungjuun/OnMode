@@ -5,6 +5,13 @@ import { emptySnapshot, totals, type Command, type Snapshot } from '../../src/do
 import { openDB } from 'idb'
 
 describe('IndexedDB transactions', () => {
+  it('serializes concurrent registrations of the same ISBN', async () => {
+    const repository = localRepository(Date.now, 'isbn-race')
+    const book = { kind: 'book' as const, name: '도서', author: '저자', pages: 100, currentPage: 0, goalPages: 10, isbn: '9780140328721' }
+    const attempts = await Promise.allSettled(['first', 'second'].map(id => repository.execute({ type: 'activity', value: { ...book, id } })))
+    expect(attempts.filter(r => r.status === 'fulfilled')).toHaveLength(1)
+    expect((await repository.load()).snapshot.activities).toHaveLength(1)
+  })
   it('serializes competing timer starts and rewards a session only once', async () => {
     let now = 10_000
     const first = localRepository(() => now, 'atomic')
