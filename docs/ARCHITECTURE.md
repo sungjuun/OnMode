@@ -26,4 +26,8 @@ React + Vite는 웹 SPA를 만들며 Capacitor는 같은 자산을 네이티브 
 
 웹 비밀번호 재설정은 앱 로그인과 분리한 [Supabase Auth PKCE 흐름](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail)을 사용한다. 재설정 요청 브라우저에는 교환에 필요한 검증값만 저장한다. 콜백의 일회용 코드는 즉시 주소에서 지우고, 교환한 세션은 비밀번호 변경 화면의 메모리에만 둔다. 변경 성공 또는 화면을 벗어날 때 그 세션을 종료한다. 네이티브 앱용 복구 딥 링크는 모바일 베타에서 다룬다.
 
+계정 삭제는 독립된 메모리 클라이언트에서 현재 비밀번호로 로그인한 뒤 호출한다. 서버는 JWT의 사용자가 소유한 활성 [Auth 세션](https://supabase.com/docs/guides/auth/sessions), 최근 비밀번호 인증, 확인 문구를 검사한다. 계정 삭제와 그룹 이관은 하나의 트랜잭션에서 처리되며, 삭제한 세션의 기존 JWT로는 앱 RPC를 다시 호출할 수 없다.
+
+화면 테마는 계정 데이터와 분리한 기기 설정이다. 브라우저가 화면을 그리기 전에 저장한 선택 또는 시스템 테마를 적용한다. 공통 CSS 색상 토큰으로 화면, 입력창, 차트, 공부방 색을 바꾸며 시스템 설정 변경도 즉시 반영한다.
+
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).

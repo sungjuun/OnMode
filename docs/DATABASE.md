@@ -16,4 +16,6 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 
 그룹에 참여 중인 상태에서 완료한 세션을 그룹에 기여분으로 저장한다. 탈퇴해도 그룹 합계는 유지되며, 개인 랭킹은 현재 멤버의 현재 가입 기간만 집계한다. 그룹원에게는 이름·역할·목표·집중 상태와 합계만 공개한다. 개인 세션의 활동명이나 기록은 공개하지 않는다.
 
+계정 삭제는 일반 그룹 탈퇴와 달리 해당 사용자의 세션과 그룹 기여분도 제거한다. RPC는 본인의 활성 세션과 최근 비밀번호 인증을 확인하고, 사용자별 작업과 그룹 변경을 잠금으로 직렬화한다. 공유 그룹의 그룹장을 이관하거나 빈 그룹을 삭제한 뒤 `auth.users`를 삭제하며, 소유한 개인 기록과 로그인 세션은 외래키로 함께 삭제된다. 운영 백업과 서비스 감사 로그의 보관 정책은 별도 출시 준비 항목이다.
+
 참고: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Data API 기본 노출 정책 변경](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [클라이언트 API 키](https://supabase.com/docs/guides/getting-started/api-keys).

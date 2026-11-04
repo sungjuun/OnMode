@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f7f8fc" />
+    <script>
+      // Set the theme before the first paint. Keep the key in sync with src/data/appearance.ts.
+      (() => {
+        let preference;
+        try { preference = localStorage.getItem('onmode:appearance'); } catch {}
+        const dark = preference === 'dark' || (preference !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#131320' : '#f7f8fc';
+      })();
+    </script>
     <meta name="description" content="집중을 켜다, 성장을 쌓다. 나만의 집중 루틴, 온모드." />
     <link rel="icon" href="/onmode.svg" type="image/svg+xml" />
     <title>ONMODE · 온모드</title>

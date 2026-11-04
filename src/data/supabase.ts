@@ -9,6 +9,13 @@ export const supabase = configured ? createClient(url!, key!, {
   auth: { detectSessionInUrl: window.location.pathname !== recoveryPath },
 }) : null
 
+export function createVerificationClient() {
+  if (!configured) throw Error('Supabase 연결이 필요합니다.')
+  return createClient(url!, key!, {
+    auth: { storageKey: 'onmode-account-verification:' + crypto.randomUUID(), persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
+}
+
 export function createRecoveryAuth() {
   if (!configured) throw Error('Supabase 연결이 필요합니다.')
   // Keep the PKCE verifier across the email navigation. Never persist a recovery session.

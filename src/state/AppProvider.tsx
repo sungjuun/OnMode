@@ -8,10 +8,12 @@ import { isDue, nextBreak } from '../domain/timer'
 import { webNotifications } from '../data/webNotifications'
 import { messageOf, Toast } from '../ui/base'
 import { AppContext } from './context'
+import { trackAppearance } from './appearance'
 
 const local = localRepository()
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  useEffect(trackAppearance, [])
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!supabase)
   useEffect(() => {
