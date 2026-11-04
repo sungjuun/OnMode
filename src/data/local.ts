@@ -1,0 +1,77 @@
+import { openDB, type DBSchema } from 'idb'
+import { emptySnapshot, items, totals, type Snapshot, type Command, type Repository, type BreakTimer } from '../domain/model'
+import { isDue, pause, recordFor, resume } from '../domain/timer'
+
+interface OnmodeDB extends DBSchema { state: { key: string; value: Snapshot | BreakTimer } }
+let db: ReturnType<typeof openDB<OnmodeDB>> | undefined
+function database() {
+  db ??= openDB<OnmodeDB>('onmode', 1, { upgrade(database) { database.createObjectStore('state') } })
+  return db
+}
+function upsert<T extends { id: string }>(list: T[], value: T) {
+  return list.some(item => item.id === value.id) ? list.map(item => item.id === value.id ? value : item) : [...list, value]
+}
+export function applyLocal(s: Snapshot, command: Command, now: number): Snapshot {
+  switch (command.type) {
+    case 'profile': return { ...s, profile: command.value }
+    case 'certification': return { ...s, certifications: upsert(s.certifications, command.value) }
+    case 'activity': return { ...s, activities: upsert(s.activities, command.value) }
+    case 'journal': {
+      if (s.journal.some(j => j.id === command.value.id)) return s
+      const a = s.activities.find(item => item.id === command.value.activityId)
+      if (!a) throw Error('활동을 찾을 수 없습니다.')
+      return { ...s, journal: [...s.journal, command.value],
+        activities: a.kind === 'book' ? upsert(s.activities, { ...a, currentPage: command.value.amount }) : s.activities }
+    }
+    case 'start': {
+      if (s.timer?.id === command.value.id || s.records.some(r => r.id === command.value.id)) return s
+      if (s.timer) throw Error('이미 진행 중인 집중이 있습니다.')
+      if (command.value.activityId && !s.activities.some(a => a.id === command.value.activityId)) throw Error('활동을 찾을 수 없습니다.')
+      return { ...s, timer: { ...command.value, startedAt: now, activeSince: now, elapsedMs: 0 } }
+    }
+    case 'pause':
+    case 'resume': {
+      if (s.timer?.id !== command.id || isDue(s.timer, now)) return s
+      return { ...s, timer: command.type === 'pause' ? pause(s.timer, now) : resume(s.timer, now) }
+    }
+    case 'finish': {
+      if (s.timer?.id !== command.id) return s
+      const record = recordFor(s.timer, now)
+      return { ...s, timer: null, records: record ? upsert(s.records, record) : s.records }
+    }
+    case 'buy': {
+      const item = items.find(i => i.id === command.id)
+      if (!item || s.inventory.includes(item.id)) return s
+      if (totals(s).coins < item.price) throw Error('코인이 부족합니다.')
+      return { ...s, inventory: [...s.inventory, item.id] }
+    }
+    case 'place': {
+      if (!s.inventory.includes(command.id)) throw Error('보유하지 않은 아이템입니다.')
+      return { ...s, placed: command.placed ? [...new Set([...s.placed, command.id])] : s.placed.filter(id => id !== command.id) }
+    }
+  }
+}
+export function localRepository(clock = Date.now, key = 'guest'): Repository {
+  return {
+    async load() {
+      const state = (await (await database()).get('state', key)) as Snapshot | undefined
+      return { snapshot: state ?? emptySnapshot() }
+    },
+    async execute(command) {
+      const tx = (await database()).transaction('state', 'readwrite')
+      const current = (await tx.store.get(key)) as Snapshot | undefined
+      const snapshot = applyLocal(current ?? emptySnapshot(), command, clock())
+      await tx.store.put(snapshot, key)
+      await tx.done
+      return { snapshot }
+    },
+  }
+}
+export async function loadBreak(key: string) {
+  return (await (await database()).get('state', 'break:' + key)) as BreakTimer | undefined
+}
+export async function saveBreak(key: string, value: BreakTimer | null) {
+  const db = await database()
+  if (value) await db.put('state', value, 'break:' + key)
+  else await db.delete('state', 'break:' + key)
+}
