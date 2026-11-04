@@ -41,3 +41,5 @@ ISBN 검증·변환은 네트워크에 의존하지 않는 `src/domain/isbn.ts`�
 공식 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 연동](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Supabase API 권한](https://supabase.com/docs/guides/api/securing-your-api), [Realtime Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).
 
 공동 도서관은 src/data/groupLibrary.ts의 전용 API를 사용하고 기존 group_updates Realtime 변경 신호와 주기 조회로 동기화한다. SharedLibraryRoom은 개인 방과 동일한 순수 좌표 규칙·SVG를 재사용하며 공용 배치 초안과 버전을 별도로 유지한다. 개인 인벤토리·코인·보상은 사용하지 않는다. StudyLibrary는 커서 페이지를 조회하고 원본 서재 도서의 명시적 공유, 그룹 목록 제거와 개인 서재 가져오기를 제공한다. 가져오기 UUID는 실패 후에도 유지하며 서버 연결 기록으로 새 요청 ID의 재시도까지 중복을 막는다. 개인 스냅숏에서 가져온 책을 확인한 뒤 집중 링크를 활성화해 활동이 로드되기 전에 자유 집중으로 시작하는 상황을 막는다. 그룹 변경·로그아웃 시 컴포넌트 상태를 초기화하며 오래된 조회 응답은 무시한다.
+
+겹침 순서는 RoomLayout.order의 선택 필드로 관리한다. 순수 도메인 규칙이 기존 SVG 순서, 개인 7종·공동 5종 팔레트, 기본값 정규화와 보이는 가구 사이의 순서 변경을 처리한다. 숨긴 가구의 전체 순서 슬롯도 유지해 다시 배치할 때 선호 순서를 복원한다. Room은 키를 유지한 SVG 그룹을 순서대로 그려 보이는 순서와 클릭 대상을 일치시키고, Page Up·Page Down 후 키보드 초점을 복원한다. 새 필드가 없는 IndexedDB 기록은 기존 기본 순서로 읽으며 순서를 생략한 이전 명령은 저장된 선호를 유지한다. 위치와 순서는 같은 배치 버전으로 저장한다.

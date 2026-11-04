@@ -1,4 +1,4 @@
-import type { RoomLayout, RoomPositions } from '../domain/room'
+import type { MovableItem, RoomLayout, RoomPositions } from '../domain/room'
 import { rpc, supabase } from './supabase'
 
 export interface SharedBook {
@@ -27,5 +27,5 @@ export const groupLibrary = {
   create: (groupId: string, id: string, activityId: string) => change<{ id: string }>(groupId, 'create', { id, activityId }),
   delete: (groupId: string, id: string) => change<{ id: string }>(groupId, 'delete', { id }),
   import: (groupId: string, id: string, activityId: string) => change<{ id: string }>(groupId, 'import', { id, activityId }),
-  layout: (groupId: string, revision: number, positions: RoomPositions) => change<{ room: RoomLayout }>(groupId, 'layout', { revision, positions }),
+  layout: (groupId: string, revision: number, positions: RoomPositions, order?: MovableItem[]) => change<{ room: RoomLayout }>(groupId, 'layout', { revision, positions, ...(order === undefined ? {} : { order }) }),
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { localRepository } from '../../src/data/local'
 import { emptySnapshot, totals, type Command, type Snapshot } from '../../src/domain/model'
 import { openDB } from 'idb'
+import { moveLayer } from '../../src/domain/room'
 
 describe('IndexedDB transactions', () => {
   it('serializes concurrent registrations of the same ISBN', async () => {
@@ -36,6 +37,30 @@ describe('IndexedDB transactions', () => {
 })
 
 describe('room layout persistence', () => {
+  it('saves position and order atomically and preserves layers for old callers and hidden items', async () => {
+    const repository = localRepository(Date.now, 'room-layers')
+    const order = moveLayer([], 'desk', 1, ['desk', 'chair'])
+    const attempts = await Promise.allSettled([
+      repository.execute({ type: 'room_layout', revision: 0, positions: {}, order }),
+      repository.execute({ type: 'room_layout', revision: 0, positions: { desk: { x: 10, y: 0 } }, order: [] }),
+    ])
+    expect(attempts.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+    const current = (await repository.load()).snapshot.room
+    await repository.execute({ type: 'room_layout', revision: current.revision, positions: {}, order })
+    const saved = (await repository.load()).snapshot.room
+    expect(saved.order).toEqual(order)
+    await repository.execute({ type: 'room_layout', revision: 0, positions: {}, order })
+    expect((await repository.load()).snapshot.room.revision).toBe(saved.revision)
+    await expect(repository.execute({ type: 'room_layout', revision: 0, positions: {}, order: [] })).rejects.toThrow('다른 곳')
+    await repository.execute({ type: 'room_layout', revision: saved.revision, positions: { desk: { x: 15, y: 0 } } })
+    await repository.execute({ type: 'place', id: 'chair', placed: false })
+    await repository.execute({ type: 'place', id: 'chair', placed: true })
+    const restored = (await repository.load()).snapshot
+    expect(restored.room.order).toEqual(order)
+    expect(restored.room.positions.desk).toEqual({ x: 15, y: 0 })
+    expect(restored.inventory).toEqual(['desk', 'chair'])
+    expect(totals(restored)).toEqual({ xp: 0, coins: 0 })
+  })
   it('upgrades saved experience data without replacing existing profile records', async () => {
     const repository = localRepository(Date.now, 'legacy-room')
     await repository.load()

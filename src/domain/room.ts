@@ -11,9 +11,34 @@ export const roomItems = {
 // The SVG is 640 × 356. Keep these bounds aligned with room_item_bounds in SQL.
 export type MovableItem = keyof typeof roomItems
 export type RoomPositions = Partial<Record<MovableItem, RoomPosition>>
-export interface RoomLayout { revision: number; positions: RoomPositions }
+export interface RoomLayout { revision: number; positions: RoomPositions; order?: MovableItem[] }
 export const emptyRoom = (): RoomLayout => ({ revision: 0, positions: {} })
 export const movableItems = Object.keys(roomItems) as MovableItem[]
+// SVG paint order, from back to front. Keep the SQL palettes in this order.
+export const defaultRoomOrder: MovableItem[] = ['shelf', 'frame', 'desk', 'lamp', 'laptop', 'chair', 'plant']
+export const sharedRoomItems: MovableItem[] = ['shelf', 'desk', 'lamp', 'chair', 'plant']
+export function roomOrder(order: readonly MovableItem[] = [], available: readonly MovableItem[] = movableItems): MovableItem[] {
+  return [...defaultRoomOrder.filter(id => available.includes(id) && !order.includes(id)), ...order.filter(id => available.includes(id))]
+}
+export function normalizeOrder(value: unknown, available: readonly MovableItem[] = movableItems): MovableItem[] {
+  if (!Array.isArray(value) || value.some(id => !available.includes(id)) || new Set(value).size !== value.length || value.length !== 0 && value.length !== available.length) throw Error('가구 겹침 순서를 확인해 주세요.')
+  const base = roomOrder([], available)
+  return value.length === 0 || value.every((id, i) => id === base[i]) ? [] : [...value] as MovableItem[]
+}
+export function sameOrder(a: readonly MovableItem[] = [], b: readonly MovableItem[] = [], available: readonly MovableItem[] = movableItems) {
+  const other = roomOrder(b, available)
+  return roomOrder(a, available).every((id, i) => id === other[i])
+}
+export function moveLayer(order: readonly MovableItem[] | undefined, id: MovableItem, direction: -1 | 1, visible: readonly MovableItem[], available: readonly MovableItem[] = movableItems): MovableItem[] {
+  const full = roomOrder(order, available), shown = full.filter(item => visible.includes(item))
+  const target = shown[shown.indexOf(id) + direction]
+  if (!shown.includes(id) || !target) return normalizeOrder(full, available)
+  const from = full.indexOf(id), to = full.indexOf(target)
+  const previous = full[from]
+  full[from] = full[to]
+  full[to] = previous
+  return normalizeOrder(full, available)
+}
 export const isMovable = (id: string): id is MovableItem => Object.hasOwn(roomItems, id)
 export const roomPosition = (positions: RoomPositions, id: MovableItem): RoomPosition => positions[id] ?? { x: 0, y: 0 }
 export function roomBounds(id: MovableItem) {

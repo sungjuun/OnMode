@@ -1,7 +1,7 @@
 import { openDB, type DBSchema } from 'idb'
 import { emptySnapshot, items, totals, type Snapshot, type Command, type Repository, type BreakTimer } from '../domain/model'
 import { isDue, pause, recordFor, resume } from '../domain/timer'
-import { emptyRoom, normalizePositions, samePositions } from '../domain/room'
+import { emptyRoom, normalizeOrder, normalizePositions, sameOrder, samePositions } from '../domain/room'
 import { normalizeIsbn } from '../domain/isbn'
 
 interface OnmodeDB extends DBSchema { state: { key: string; value: Snapshot | BreakTimer } }
@@ -60,11 +60,12 @@ export function applyLocal(s: Snapshot, command: Command, now: number): Snapshot
     }
     case 'room_layout': {
       const positions = normalizePositions(command.positions)
+      const order = normalizeOrder(command.order === undefined ? s.room.order ?? [] : command.order)
       if (Object.keys(command.positions).some(id => !s.inventory.includes(id))) throw Error('보유하지 않은 아이템입니다.')
       if (!Number.isInteger(command.revision) || command.revision < 0) throw Error('배치 정보를 다시 불러와 주세요.')
-      if (samePositions(s.room.positions, positions)) return s
+      if (samePositions(s.room.positions, positions) && sameOrder(s.room.order, order)) return s
       if (s.room.revision !== command.revision) throw Error('다른 곳에서 배치가 변경됐어요. 최신 배치를 불러와 주세요.')
-      return { ...s, room: { revision: s.room.revision + 1, positions } }
+      return { ...s, room: { revision: s.room.revision + 1, positions, ...(order.length ? { order } : {}) } }
     }
   }
 }

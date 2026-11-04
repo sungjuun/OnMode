@@ -1,4 +1,4 @@
-import { emptyRoom, type RoomLayout, type RoomPositions } from './room'
+import { emptyRoom, type MovableItem, type RoomLayout, type RoomPositions } from './room'
 
 export type Method = 'pomodoro' | 'flow' | 'deep' | 'custom'
 export type ActivityKind = 'subject' | 'book'
@@ -32,7 +32,7 @@ export type Command =
   | { type: 'pause' | 'resume' | 'finish'; id: string }
   | { type: 'buy'; id: string }
   | { type: 'place'; id: string; placed: boolean }
-  | { type: 'room_layout'; revision: number; positions: RoomPositions }
+  | { type: 'room_layout'; revision: number; positions: RoomPositions; order?: MovableItem[] }
 
 export interface Repository { load(): Promise<View>; execute(command: Command): Promise<View> }
 
