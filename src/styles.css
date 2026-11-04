@@ -308,6 +308,22 @@ dialog .toast { position:static; margin:0 19px 15px; max-width:none; }
 .notice-card summary small { display:block; color:var(--muted); font-size:10px; margin-top:4px; }
 .notice-body { white-space:pre-wrap; overflow-wrap:anywhere; padding:0 12px 12px; line-height:1.75; font-size:13px; }
 .notice-card .row-actions { padding:0 10px 10px; margin-top:0; }
+.chat-section { border-top:1px solid var(--line); padding-top:18px; margin-top:18px; min-width:0; }
+.chat-scroll { height:340px; overflow:auto; overscroll-behavior:contain; border:1px solid var(--line); border-radius:12px; background:var(--canvas); margin-top:12px; padding:12px; overflow-anchor:none; }
+.chat-list { display:grid; gap:15px; }
+.chat-message { max-width:94%; justify-self:start; min-width:0; }
+.chat-own { justify-self:end; }
+.chat-meta { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:4px; color:var(--muted); font-size:10px; }
+.chat-meta strong { font-size:11px; color:var(--ink); overflow-wrap:anywhere; }
+.chat-meta .icon-button { width:28px; height:28px; margin-left:auto; }
+.chat-bubble { padding:9px 11px; border:1px solid var(--line); border-radius:2px 12px 12px; background:var(--surface); font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.chat-own .chat-bubble { background:var(--soft); border-color:var(--accent-border); border-radius:12px 2px 12px 12px; }
+.chat-deleted { color:var(--muted); font-style:italic; }
+.chat-composer { display:grid; gap:8px; margin-top:12px; }
+.chat-composer-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.chat-composer-actions small { color:var(--muted); font-size:10px; }
+.chat-latest { margin-top:8px; }
+.chat-delete-preview { white-space:pre-wrap; overflow-wrap:anywhere; padding:10px; border-radius:9px; background:var(--soft-subtle); font-size:13px; }
 .challenges-heading,.challenge-title { display:flex; align-items:center; justify-content:space-between; gap:9px; flex-wrap:wrap; }
 .challenges-heading h2 { display:flex; align-items:center; gap:6px; }
 .challenges-heading p { margin-top:4px; }

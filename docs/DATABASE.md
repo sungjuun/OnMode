@@ -11,6 +11,7 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 | 그룹 | `study_groups` → `group_members`, `group_updates`, `group_contributions`. 멤버십과 그룹장 제약, Realtime 버전 신호, 세션별 공동 목표 기여 |
 | 챌린지 | `study_groups` → `study_challenges`. 공동 목표, 날짜·시간대, 서버가 계산한 기간 경계, 생성·취소 시각 |
 | 공지 | `study_groups` → `group_notices`. 제목·본문, 작성·수정 시각, 동시 수정 검사용 버전 |
+| 채팅 | `study_groups` → `group_messages`, `group_chat_updates`. 사용자 소유 메시지와 내용 없는 실시간 변경 신호 |
 
 모든 공개 테이블에서 RLS를 활성화한다. `authenticated`에 필요한 조회 권한만 명시적으로 부여한다. 개인 자료는 자신의 행만 읽을 수 있고, 그룹 변경 신호는 그룹 멤버만 구독할 수 있다. 그룹장만 비공개 코드 조회와 목표 수정을 할 수 있다. 그룹장이 탈퇴하면 가입 순으로 권한을 이관하고, 마지막 멤버이면 그룹을 삭제한다.
 
@@ -23,5 +24,7 @@ Supabase Auth의 `auth.users`가 사용자 ID의 기준입니다. 애플리케�
 챌린지의 생성·취소는 그룹장만 실행할 수 있다. 회원에게 직접 쓰기 권한을 주지 않으며, RLS로 같은 그룹의 멤버에게만 조회를 허용한다. RPC가 활성 계정과 멤버·그룹장 권한을 다시 확인한다. 생성 요청 ID로 재시도를 중복 처리하지 않고, 개인·그룹 잠금 순서를 기존 삭제 절차와 맞춘다. 챌린지 집계는 `group_contributions`와 검증된 집중 세션으로 계산하므로 클라이언트가 진도나 보상을 입력할 수 없다. 기간 경계는 저장한 시간대 기준으로 서버에서 계산하고 종료일 다음 날 0시를 제외 경계로 사용한다. 변경 시 기존 `group_updates` 신호로 멤버 화면을 다시 조회한다.
 
 공지 테이블은 RLS로 그룹 멤버에게만 조회를 허용하고 직접 쓰기는 차단한다. 쓰기 RPC는 활성 세션·그룹장 권한과 수정 버전을 검증한다. 생성 UUID 및 동일 내용 수정 재시도는 중복 처리하지 않는다. 조회는 `(created_at,id)` 커서와 그룹별 복합 인덱스를 사용해 같은 작성 시각에도 누락·중복 없이 페이지를 나눈다. 개인 작성자 ID를 저장하지 않는 그룹 공유 자료이며 그룹 삭제 시 함께 삭제한다. 그룹장이 탈퇴하거나 계정을 삭제해도 남은 그룹에서는 공지를 유지한다.
+
+채팅 RPC는 활성 세션과 현재 멤버십을 확인하고 발신자·시각을 서버에서 정한다. 그룹·발신자별 인덱스로 커서 조회와 전송 제한을 처리한다. 사용자 프로필 잠금으로 그룹 간 동시 전송도 직렬화하며, 같은 메시지 ID의 재시도를 먼저 확인해 중복과 제한 오차를 막는다. 삭제는 발신자 본인 또는 현재 그룹장에게 허용하고 본문을 NULL로 바꾼다. 발신자 계정에는 삭제 전파 외래키를 사용해 계정 삭제 시 해당 메시지를 제거한다. 메시지와 변경 신호 테이블 모두 RLS를 적용하고 클라이언트 직접 쓰기는 차단한다.
 
 참고: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Data API 기본 노출 정책 변경](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [클라이언트 API 키](https://supabase.com/docs/guides/getting-started/api-keys).
