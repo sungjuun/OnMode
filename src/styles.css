@@ -268,6 +268,14 @@ h3 { font-weight: 750; font-size: 14px; }
 .error-state { margin-block:8px; background:var(--error-bg); color:var(--error-text); display:flex; align-items:center; gap:8px; border-radius:9px; padding:10px; font-size:13px; overflow-wrap:anywhere; }.error-state svg { flex:none; }
 .form-stack { display:grid; gap:13px; margin-top:15px; }.form-stack>.btn { justify-self:start; }
 .book-search { padding-bottom:18px; border-bottom:1px solid var(--line); }
+.book-search>p,.book-search>.book-match { margin-top:12px; overflow-wrap:anywhere; }
+.book-discovery { display:grid; gap:10px; margin-top:14px; max-height:420px; overflow:auto; padding:2px; overscroll-behavior:contain; }
+.book-discovery>.btn { justify-self:start; }.book-discovery .row-actions { align-items:center; font-size:12px; }
+.barcode-scanner { display:grid; gap:9px; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:11px; background:var(--soft-subtle); }
+.barcode-scanner video { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:8px; background:#101019; }.barcode-scanner video[hidden] { display:none; }
+.barcode-scanner>.btn { justify-self:start; }.barcode-scanner .row-actions { margin-top:0; }
+.barcode-file { position:relative; overflow:hidden; cursor:pointer; }.barcode-file input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }.barcode-file:focus-within { outline:3px solid var(--ring); outline-offset:2px; }
+.barcode-file:has(input:disabled) { opacity:.5; cursor:default; }
 .book-match { display:grid; gap:9px; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow-wrap:anywhere; }
 .book-match>.btn { justify-self:start; }.book-match h3 { font-size:15px; }.book-match p { font-size:13px; }
 .study-library { margin-top:24px; border-top:1px solid var(--line); padding-top:20px; }
