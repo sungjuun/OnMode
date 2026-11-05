@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import type { Page } from '@playwright/test'
 
-export function dataOf<T>(result: { data: T | null; error: { code?: string } | null }): T {
-  if (result.error || result.data === null) throw Error('Local fixture operation failed: ' + (result.error?.code ?? 'missing data'))
+export function dataOf<T>(result: { data: T | null; error: { code?: string; statusCode?: string } | null }): T {
+  if (result.error || result.data === null) throw Error('Local fixture operation failed: ' + (result.error?.code ?? result.error?.statusCode ?? 'missing data'))
   return result.data
 }
 

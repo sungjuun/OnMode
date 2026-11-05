@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { expect, test } from '@playwright/test'
 
@@ -46,10 +46,20 @@ test('deletion requires a fresh password and removes personal records while tran
     }
     const memberMessageId = randomUUID()
     dataOf(await member.rpc('onmode_chat_change', { group_id: groupId, action: 'send', payload: { id: memberMessageId, body: '남은 멤버의 대화' } }))
+    const attachmentId = randomUUID(), attachedMessageId = randomUUID(), fileText = '계정 삭제용 로컬 첨부'
+    const attached = dataOf(await owner.rpc('onmode_chat_file', { group_id: groupId, action: 'reserve', payload: {
+      id: attachmentId, messageId: attachedMessageId, name: '삭제 확인.txt', mime: 'text/plain', bytes: Buffer.byteLength(fileText), sha256: createHash('sha256').update(fileText).digest('hex'),
+    } }))
+    expect((await owner.storage.from('onmode-chat-files').upload(attached.objectName, new Blob([fileText], { type: 'text/plain' }), { contentType: 'text/plain' })).error).toBeNull()
+    dataOf(await owner.rpc('onmode_chat_change', { group_id: groupId, action: 'send', payload: { id: attachedMessageId, body: '첨부 파일 삭제 확인', attachmentId } }))
+    expect((await member.storage.from('onmode-chat-files').download(attached.objectName)).error).toBeNull()
     const focusId = randomUUID()
     dataOf(await owner.rpc('onmode_command', { command: { type: 'start', value: { id: focusId, method: 'flow', activityId: null, targetSeconds: null, restSeconds: 0 } } }))
     sql("update public.focus_sessions set active_since = active_since - interval '65 seconds' where id = '" + focusId + "'")
     dataOf(await owner.rpc('onmode_command', { command: { type: 'finish', id: focusId } }))
+    const earnedGroupBadge = dataOf(await owner.rpc('onmode_group_achievements', { group_id: groupId })).find((a: { id: string }) => a.id === 'first_focus').earnedAt
+    expect(earnedGroupBadge).not.toBeNull()
+    expect(dataOf(await member.rpc('onmode_study_season', { group_id: groupId }))).toMatchObject({ sessions: 1, contributors: 1, ranking: [{ id: ownerId }] })
     expect(sql("select count(*) from public.reward_transactions where user_id = '" + ownerId + "'")).toBe('1')
     expect((await anonymous.rpc('onmode_delete_account', { confirmation: '계정 삭제' })).error?.code).toBe('42501')
     expect((await owner.rpc('onmode_delete_account', { confirmation: '삭제' })).error?.code).toBe('22023')
@@ -90,11 +100,18 @@ test('deletion requires a fresh password and removes personal records while tran
     }
     expect(sql("select count(*) from auth.users where id = '" + ownerId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_messages where sender_id = '" + ownerId + "'")).toBe('0')
+    expect(sql("select count(*) from public.group_chat_files where id = '" + attachmentId + "'")).toBe('0')
+    expect((await member.storage.from('onmode-chat-files').download(attached.objectName)).error).not.toBeNull()
+    execFileSync(process.execPath, ['scripts/chat-file-gc.mjs', '--once'], { stdio: ['ignore', 'pipe', 'pipe'] })
+    expect(sql("select count(*) from storage.objects where bucket_id = 'onmode-chat-files' and name = '" + attached.objectName + "'")).toBe('0')
     expect(sql("select count(*) from public.study_groups where id = '" + soloId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_notices where id = '" + soloNoticeId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_library_books where id = '" + soloBook + "'")).toBe('0')
     expect(sql("select count(*) from public.group_library_layouts where group_id = '" + soloId + "'")).toBe('0')
     expect(sql("select count(*) from public.group_contributions where session_id = '" + focusId + "'")).toBe('0')
+    expect(sql("select count(*) from public.group_achievements where group_id = '" + soloId + "'")).toBe('0')
+    expect(dataOf(await member.rpc('onmode_group_achievements', { group_id: groupId })).find((a: { id: string }) => a.id === 'first_focus')).toMatchObject({ value: 0, earnedAt: earnedGroupBadge })
+    expect(dataOf(await member.rpc('onmode_study_season', { group_id: groupId }))).toMatchObject({ totalSeconds: 0, sessions: 0, contributors: 0, ranking: [] })
     expect((await owner.rpc('onmode_snapshot')).error?.code).toBe('42501')
     expect((await owner.rpc('onmode_library', { group_id: groupId })).error?.code).toBe('42501')
     expect(dataOf(await member.rpc('onmode_library', { group_id: groupId }))).toMatchObject({
@@ -114,5 +131,6 @@ test('deletion requires a fresh password and removes personal records while tran
     for (const gid of fixtureIds) sql("delete from public.study_groups where id = '" + gid + "'")
     sql("delete from auth.users where email in ('" + email + "','" + memberEmail + "')")
     await Promise.all([owner, member, anonymous].map(app => app.auth.dispose()))
+    execFileSync(process.execPath, ['scripts/chat-file-gc.mjs', '--once'], { stdio: ['ignore', 'pipe', 'pipe'] })
   }
 })

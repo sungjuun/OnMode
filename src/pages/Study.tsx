@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { ChevronRight, Flag, Globe2, KeyRound, LockKeyhole, Plus, Search, Trophy, Users } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { ChevronRight, Flag, Globe2, KeyRound, Plus, Trophy, Users } from 'lucide-react'
 import { Link } from 'react-router'
 import { configured, groups, supabase, type Group, type Ranking } from '../data/supabase'
+import { normalizeGroupSearch } from '../domain/groupSearch'
 import { duration, percent } from '../domain/stats'
 import { useApp } from '../state/context'
 import { Card, CardTitle, Dialog, Empty, ErrorState, Field, IconBox, Loading, messageOf, PageTitle, Progress } from '../ui/base'
@@ -9,6 +10,9 @@ import { StudyChallenges } from '../ui/StudyChallenges'
 import { StudyNotices } from '../ui/StudyNotices'
 import { StudyChat } from '../ui/StudyChat'
 import { StudyLibrary } from '../ui/StudyLibrary'
+import { StudyAchievements } from '../ui/StudyAchievements'
+import { StudySeasons } from '../ui/StudySeasons'
+import { GroupSearchField, PublicGroupResults, StudyGroupCard } from '../ui/StudyGroupList'
 
 type Editor = 'create' | 'invite' | 'goal' | 'leave'
 
@@ -29,7 +33,8 @@ function ConnectedStudy() {
   const [list, setList] = useState<Group[] | null>(null)
   const [rank, setRank] = useState<{ groupId: string; data: Ranking } | null>(null)
   const [selected, setSelected] = useState('')
-  const [query, setQuery] = useState('')
+  const [mineQuery, setMineQuery] = useState('')
+  const [publicQuery, setPublicQuery] = useState('')
   const [tab, setTab] = useState<'mine' | 'discover'>('mine')
   const [period, setPeriod] = useState<'today' | 'week'>('today')
   const [editor, setEditor] = useState<Editor | null>(null)
@@ -38,13 +43,26 @@ function ConnectedStudy() {
   const [rankIssue, setRankIssue] = useState('')
   const [live, setLive] = useState(false)
   const [revision, setRevision] = useState(0)
+  const listRequest = useRef(0)
+  const joinedGroup = useRef('')
+  const groupHeading = useRef<HTMLDivElement>(null)
   const group = list?.find(g => g.id === selected && g.role)
   const id = group?.id
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const load = useCallback(async () => {
-    try { setList(await groups.list()); setIssue('') } catch (e) { setIssue(messageOf(e)) }
+    const request = ++listRequest.current
+    try {
+      const joined = await groups.mine()
+      if (request === listRequest.current) { setList(joined); setIssue('') }
+    } catch (e) { if (request === listRequest.current) setIssue(messageOf(e)) }
   }, [])
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (id && joinedGroup.current === id) {
+      joinedGroup.current = ''
+      groupHeading.current?.focus()
+    }
+  }, [id])
   useEffect(() => {
     if (!id) return
     let active = true, sequence = 0
@@ -69,7 +87,12 @@ function ConnectedStudy() {
       const next = await groups.change(action, payload)
       await load()
       if (action === 'leave') setSelected('')
-      else { if (next !== selected) { setLive(false); setRankIssue(''); setSelected(next) }; setTab('mine') }
+      else {
+        if (action === 'join') joinedGroup.current = next
+        if (next !== selected) { setLive(false); setRankIssue(''); setSelected(next) }
+        if (action !== 'goal') setMineQuery('')
+        setTab('mine')
+      }
       setEditor(null)
       notify(action === 'leave' ? '스터디에서 나왔어요.' : action === 'goal' ? '공동 목표를 바꿨어요.' : '스터디에 참여했어요.')
     } catch (e) { notify(messageOf(e), true) } finally { setBusy(false) }
@@ -82,7 +105,12 @@ function ConnectedStudy() {
     if (editor === 'goal' && id) void change('goal', { id, goalMinutes: Number(form.get('goal')) })
     if (editor === 'leave' && id) void change('leave', { id })
   }
-  const filtered = list?.filter(g => (tab === 'mine' ? !!g.role : g.isPublic && !g.role) && (g.name + ' ' + g.description).toLowerCase().includes(query.trim().toLowerCase()))
+  const discoverTerm = normalizeGroupSearch(publicQuery)
+  const mineTerm = normalizeGroupSearch(mineQuery)
+  const filtered = list?.filter(g => {
+    const text = (g.name + ' ' + g.description).toLowerCase()
+    return mineTerm.split(' ').every(term => text.includes(term))
+  })
   const ranking = rank?.groupId === id ? rank?.data : null
   const members = ranking?.members
   const groupWeek = ranking?.week ?? 0
@@ -90,14 +118,22 @@ function ConnectedStudy() {
     <PageTitle label="STUDY TOGETHER" title="스터디" description="혼자 집중하고, 함께 기록해요." action={<div className="row-actions"><button className="btn btn-soft" onClick={() => setEditor('invite')}><KeyRound size={16} />초대 코드</button><button className="btn btn-primary" onClick={() => setEditor('create')}><Plus size={17} />그룹 만들기</button></div>} />
     <div className="dashboard-grid study-grid">
       <Card><div className="segmented"><button aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}>내 그룹</button><button aria-pressed={tab === 'discover'} onClick={() => setTab('discover')}>공개 그룹</button></div>
-        <div className="search-field"><Search size={17} /><input aria-label="그룹 검색" placeholder="이름으로 검색" value={query} onChange={e => setQuery(e.target.value)} /></div>
-        {issue && <ErrorState message={issue} retry={() => void load()} />}
-        {filtered ? filtered.length ? <div className="group-list">{filtered.map(g => <article className={'group-card ' + (g.id === id ? 'selected' : '')} key={g.id}>
-          <IconBox icon={g.isPublic ? Globe2 : LockKeyhole} /><div><h3>{g.name}</h3><p>{g.description || '스터디 그룹'} · {g.members}명</p></div>
-          <button className="btn btn-soft" disabled={busy} onClick={() => { if (!g.role) void change('join', { id: g.id }); else if (g.id !== selected) { setLive(false); setRankIssue(''); setSelected(g.id) } }}>{g.role ? '보기' : '가입'}</button>
-        </article>)}</div> : <Empty icon={Users} title={query ? '검색 결과가 없어요' : '표시할 그룹이 없어요'} description="공개 그룹을 찾아보거나 새 그룹을 만들어 보세요." /> : !issue && <Loading />}
+        {tab === 'discover' ? <>
+          <GroupSearchField query={publicQuery} change={setPublicQuery} />
+          <PublicGroupResults key={discoverTerm} query={discoverTerm} busy={busy} join={gid => void change('join', { id: gid })} />
+        </> : <>
+          <GroupSearchField query={mineQuery} change={setMineQuery} />
+          {issue && <ErrorState message={issue} retry={() => void load()} />}
+          {filtered ? filtered.length ? <div className="group-list">{filtered.map(g => <StudyGroupCard
+            key={g.id} group={g} selected={g.id === id} busy={busy} actionLabel="보기"
+            action={() => { if (g.id !== selected) { setLive(false); setRankIssue(''); setSelected(g.id) } }} />)}</div>
+            : <Empty icon={Users} title={mineTerm ? '검색 결과가 없어요' : '표시할 그룹이 없어요'} description="공개 그룹을 찾아보거나 새 그룹을 만들어 보세요." />
+            : !issue && <Loading />}
+        </>}
       </Card>
-      <Card>{group ? <><CardTitle icon={Flag} title={group.name} sub={group.description || '집중 스터디'} action={<span className={'badge ' + (live ? 'badge-mint' : '')}>{live ? '실시간 연결' : '주기적으로 갱신'}</span>} />
+      <Card>{group ? <><div className="study-group-heading" ref={groupHeading} tabIndex={-1}>
+        <CardTitle icon={Flag} title={group.name} sub={group.description || '집중 스터디'} action={<span className={'badge ' + (live ? 'badge-mint' : '')}>{live ? '실시간 연결' : '주기적으로 갱신'}</span>} />
+      </div>
         <div className="metric-line"><strong>{duration(groupWeek)}</strong><span>/ {duration(group.goalMinutes * 60)} · 주간 공동 목표</span></div><Progress label="주간 공동 목표" value={percent(groupWeek, group.goalMinutes * 60)} />
         <p className="muted mt-3 text-sm">그룹 누적 {ranking ? duration(ranking.total) : '—'}{group.inviteCode ? ' · 초대 코드 ' + group.inviteCode : ''}</p>
         <div className="row-actions">{group.role === 'owner' && <button className="btn btn-soft" onClick={() => setEditor('goal')}>공동 목표 수정</button>}<button className="btn btn-quiet" onClick={() => setEditor('leave')}>그룹 탈퇴</button></div>
@@ -106,6 +142,8 @@ function ConnectedStudy() {
         {rankIssue && <ErrorState message={rankIssue} />}
         {members ? <ol className="data-list">{[...members].sort((a, b) => b[period] - a[period] || a.name.localeCompare(b.name)).map((m, i) => <li key={m.id}><span className="badge">{i + 1}</span><span className="grow"><strong>{m.name}{m.role === 'owner' ? ' · 그룹장' : ''}</strong><small>{(m.focusingUntil ?? 0) > now ? '집중 중 · ' : ''}일일 목표 {percent(m.today, m.goalMinutes * 60)}%</small></span><strong>{duration(m[period])}</strong></li>)}</ol> : !rankIssue && <Loading />}
         <StudyChallenges key={group.id} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
+        <StudyAchievements key={group.id + ':achievements'} groupId={group.id} revision={revision} />
+        <StudySeasons key={group.id + ':seasons'} groupId={group.id} revision={revision} />
         <StudyLibrary key={group.id + ':library'} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
         <StudyChat key={group.id + ':chat'} groupId={group.id} isOwner={group.role === 'owner'} revision={revision} />
       </> : <Empty icon={Trophy} title="스터디를 선택하세요" description="참여 중인 스터디를 열면 공동 목표와 랭킹을 볼 수 있어요." />}</Card>

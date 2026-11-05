@@ -5,6 +5,8 @@ import { groupLibrary, LibraryConflict, type LibraryPage, type SharedBook } from
 import { useApp, useSnapshot } from '../state/context'
 import { Dialog, Empty, ErrorState, Field, Loading, messageOf } from './base'
 import { SharedLibraryRoom } from './SharedLibraryRoom'
+import { ReadingGoalPanel } from './ReadingGoalPanel'
+import { ReadingChallenges } from './ReadingChallenges'
 
 type Editor = { kind: 'create'; id: string } | { kind: 'delete'; book: SharedBook }
 
@@ -74,16 +76,18 @@ export function StudyLibrary({ groupId, isOwner, revision }: { groupId: string; 
           <div className="row-actions">{book.myActivityId ? <><span className="badge badge-mint">내 서재에 있음</span>{snapshot.activities.some(a => a.id === book.myActivityId) ? <Link className="btn btn-soft" to={'/focus?activity=' + book.myActivityId}>이 책으로 집중</Link> : <button className="btn btn-soft" onClick={reload}>서재 다시 불러오기</button>}</>
             : <button className="btn btn-soft" disabled={!!importing} onClick={() => void bring(book)}>{importing === book.id ? '가져오는 중…' : '내 서재로 가져오기'}</button>}
             {isOwner && <button className="btn btn-quiet" onClick={() => { setFormIssue(''); setEditor({ kind: 'delete', book }) }}><Trash2 size={14} />공동 도서 제거</button>}</div>
+          <ReadingGoalPanel groupId={groupId} book={book} isOwner={isOwner} updateToken={revision + ':' + refresh} changed={update} />
         </article>)}</div>}
       {data.next && <button className="btn btn-soft mt-3" disabled={loading} onClick={() => setPages(n => n + 1)}>공동 도서 더 보기</button>}
-      <p className="muted text-xs mt-3">가져온 책의 독서 진도와 노트는 개인 서재에서 관리해요.</p>
+      <p className="muted text-xs mt-3">개인 서재의 진도와 노트는 자동 공개하지 않아요. 공유 진도는 직접 입력하며 집중 보상과 별개예요.</p>
+      {data.items.length > 0 && <ReadingChallenges groupId={groupId} isOwner={isOwner} books={data.items} revision={revision} />}
     </>}
     {editor && <Dialog title={editor.kind === 'create' ? '공동 도서 등록' : '공동 도서 제거'} close={() => { if (!busy) setEditor(null) }}>
       <form className="form-stack" onSubmit={event => void submit(event)}>
         {formIssue && <ErrorState message={formIssue} />}
         {editor.kind === 'create' ? <><p className="muted text-sm">선택한 책의 제목·저자·페이지 수·ISBN을 그룹 멤버에게 공유합니다.</p>
           {ownBooks.length ? <Field label="공유할 내 서재 도서"><select name="activity" required disabled={busy}>{ownBooks.map(book => <option key={book.id} value={book.id}>{book.name} · {book.author}</option>)}</select></Field> : <p>내 서재에 등록한 도서가 없어요. <Link className="text-link" to="/library?tab=books">서재에서 도서 등록</Link></p>}</>
-          : <p>공동 목록에서 <strong>{editor.book.name}</strong>을 제거할까요? 멤버가 개인 서재로 가져온 책과 기록은 유지됩니다.</p>}
+          : <p>공동 목록에서 <strong>{editor.book.name}</strong>을 제거할까요? 이 책의 독서 목표와 도전 기록도 함께 삭제됩니다. 멤버가 개인 서재로 가져온 책과 기록은 유지됩니다.</p>}
         <div className="row-actions"><button type="button" className="btn btn-quiet" disabled={busy} onClick={() => setEditor(null)}>취소</button><button className={'btn ' + (editor.kind === 'delete' ? 'btn-danger' : 'btn-primary')} disabled={busy || editor.kind === 'create' && !ownBooks.length}>{busy ? '처리 중…' : editor.kind === 'create' ? '공유하기' : '제거 확정'}</button></div>
       </form>
     </Dialog>}

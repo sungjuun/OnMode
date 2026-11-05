@@ -6,8 +6,8 @@ export function useJoinedGroups(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return
     let active = true
-    void groups.list().then(list => {
-      if (active) setResult({ id: userId, groups: list.filter(group => group.role) })
+    void groups.mine().then(list => {
+      if (active) setResult({ id: userId, groups: list })
     }).catch(() => { if (active) setResult({ id: userId, groups: null }) })
     return () => { active = false }
   }, [userId])

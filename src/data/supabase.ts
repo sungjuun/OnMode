@@ -55,8 +55,22 @@ export interface MemberRank {
   total: number; goalMinutes: number; focusingUntil: number | null;
 }
 export interface Ranking { members: MemberRank[]; total: number; week: number }
+export type PublicGroup = Pick<Group, 'id' | 'name' | 'description' | 'isPublic' | 'members'>
+export type GroupCursor = Pick<PublicGroup, 'id' | 'name'>
+export interface PublicGroupPage { items: PublicGroup[]; next?: GroupCursor }
+
 export const groups = {
-  list: () => rpc<Group[]>('onmode_groups'),
+  mine: () => rpc<Group[]>('onmode_my_groups'),
+  async search(query: string, cursor: GroupCursor | undefined, signal: AbortSignal): Promise<PublicGroupPage> {
+    if (!supabase) throw Error('Supabase 연결이 필요합니다.')
+    const { data, error } = await supabase.rpc('onmode_search_public_groups', {
+      search_query: query, cursor_name: cursor?.name ?? null, cursor_id: cursor?.id ?? null,
+    }).abortSignal(signal)
+    if (error) throw Error(error.code ? error.message : '공개 그룹을 불러오지 못했어요. 다시 시도해 주세요.')
+    const rows = data as PublicGroup[]
+    const items = rows.slice(0, 20), last = items.at(-1)
+    return { items, next: rows.length > 20 && last ? { id: last.id, name: last.name } : undefined }
+  },
   ranking: (id: string, zone: string) => rpc<Ranking>('onmode_ranking', { group_id: id, zone }),
   change: (action: string, payload: Record<string, unknown>) => rpc<string>('onmode_group_change', { action, payload }),
 }

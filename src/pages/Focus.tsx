@@ -6,6 +6,7 @@ import { clock, duration, percent } from '../domain/stats'
 import { elapsed } from '../domain/timer'
 import { useApp, useSnapshot } from '../state/context'
 import { Card, CardTitle, Field, PageTitle, TextLink } from '../ui/base'
+import { focusHistoryAnchor } from '../ui/FocusHistory'
 
 const choices = [['pomodoro', Timer], ['flow', Hourglass], ['deep', Zap], ['custom', Settings2]] as const
 
@@ -50,7 +51,7 @@ export function Focus() {
         <TextLink to="/library">활동 관리</TextLink>
       </Card>
     </div>
-    <Card><CardTitle icon={BookOpen} title="최근 집중 기록" action={<TextLink to="/my">기록 보기</TextLink>} />
+    <Card><CardTitle icon={BookOpen} title="최근 집중 기록" action={<TextLink to={'/my#' + focusHistoryAnchor}>기록 보기</TextLink>} />
       {recent.length ? <ul className="data-list">{recent.map(r => <li key={r.id}><span><strong>{activities.find(a => a.id === r.activityId)?.name ?? '자유 집중'}</strong><small>{methods[r.method].name}</small></span><strong>{duration(r.seconds)}</strong></li>)}</ul> : <p className="muted mt-4">첫 집중을 마치면 기록이 이곳에 쌓여요. <Link className="text-link" to="/library">활동 추가</Link></p>}
     </Card>
   </div>

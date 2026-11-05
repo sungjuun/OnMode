@@ -11,12 +11,34 @@ export const roomItems = {
 // The SVG is 640 × 356. Keep these bounds aligned with room_item_bounds in SQL.
 export type MovableItem = keyof typeof roomItems
 export type RoomPositions = Partial<Record<MovableItem, RoomPosition>>
-export interface RoomLayout { revision: number; positions: RoomPositions; order?: MovableItem[] }
+export interface RoomTransform { rotation: number; scale: number }
+export type RoomTransforms = Partial<Record<MovableItem, RoomTransform>>
+export interface RoomLayout { revision: number; positions: RoomPositions; order?: MovableItem[]; transforms?: RoomTransforms }
+export const defaultTransform: RoomTransform = { rotation: 0, scale: 100 }
+export const roomTransform = (transforms: RoomTransforms, id: MovableItem): RoomTransform => transforms[id] ?? defaultTransform
+export function normalizeTransforms(value: unknown, available: readonly MovableItem[] = movableItems): RoomTransforms {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('가구 회전과 크기를 확인해 주세요.')
+  const result: RoomTransforms = {}
+  for (const [id, raw] of Object.entries(value)) {
+    if (!isMovable(id) || !available.includes(id) || !raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('가구 회전과 크기를 확인해 주세요.')
+    const t = raw as Record<string, unknown>
+    if (Object.keys(t).length !== 2 || ![0, 90, 180, 270].includes(t.rotation as number) || typeof t.scale !== 'number' || !Number.isInteger(t.scale) || t.scale < 50 || t.scale > 120 || t.scale % 10 !== 0) throw Error('가구 회전과 크기를 확인해 주세요.')
+    if (t.rotation !== 0 || t.scale !== 100) result[id] = { rotation: t.rotation as number, scale: t.scale }
+  }
+  return result
+}
+export const sameTransforms = (a: RoomTransforms = {}, b: RoomTransforms = {}) => movableItems.every(id => {
+  const x = roomTransform(a, id), y = roomTransform(b, id)
+  return x.rotation === y.rotation && x.scale === y.scale
+})
 export const emptyRoom = (): RoomLayout => ({ revision: 0, positions: {} })
 export const movableItems = Object.keys(roomItems) as MovableItem[]
 // SVG paint order, from back to front. Keep the SQL palettes in this order.
 export const defaultRoomOrder: MovableItem[] = ['shelf', 'frame', 'desk', 'lamp', 'laptop', 'chair', 'plant']
 export const sharedRoomItems: MovableItem[] = ['shelf', 'desk', 'lamp', 'chair', 'plant']
+export const sharedRoomExtras = ['frame', 'laptop'] as const
+export type SharedRoomExtra = typeof sharedRoomExtras[number]
+export interface SharedRoomLayout extends RoomLayout { extras?: SharedRoomExtra[] }
 export function roomOrder(order: readonly MovableItem[] = [], available: readonly MovableItem[] = movableItems): MovableItem[] {
   return [...defaultRoomOrder.filter(id => available.includes(id) && !order.includes(id)), ...order.filter(id => available.includes(id))]
 }
@@ -41,24 +63,32 @@ export function moveLayer(order: readonly MovableItem[] | undefined, id: Movable
 }
 export const isMovable = (id: string): id is MovableItem => Object.hasOwn(roomItems, id)
 export const roomPosition = (positions: RoomPositions, id: MovableItem): RoomPosition => positions[id] ?? { x: 0, y: 0 }
-export function roomBounds(id: MovableItem) {
+export function roomBounds(id: MovableItem, transform: RoomTransform = defaultTransform) {
   const item = roomItems[id]
+  if (transform.rotation !== 0 || transform.scale !== 100) {
+    const sideways = transform.rotation % 180 !== 0
+    const width = (sideways ? item.height : item.width) * transform.scale / 100
+    const height = (sideways ? item.width : item.height) * transform.scale / 100
+    const cx = item.x + item.width / 2, cy = item.y + item.height / 2
+    return { minX: Math.ceil(12 - cx + width / 2), maxX: Math.floor(628 - cx - width / 2), minY: Math.ceil(12 - cy + height / 2), maxY: Math.floor(344 - cy - height / 2) }
+  }
   return { minX: 12 - item.x, maxX: 628 - item.x - item.width, minY: item.minY, maxY: item.maxY }
 }
-export function constrainPosition(id: MovableItem, point: RoomPosition): RoomPosition {
-  const bounds = roomBounds(id)
+export function constrainPosition(id: MovableItem, point: RoomPosition, transform: RoomTransform = defaultTransform): RoomPosition {
+  const bounds = roomBounds(id, transform)
   return {
     x: Math.round(Math.min(bounds.maxX, Math.max(bounds.minX, point.x))),
     y: Math.round(Math.min(bounds.maxY, Math.max(bounds.minY, point.y))),
   }
 }
-export function normalizePositions(positions: RoomPositions): RoomPositions {
+export function normalizePositions(positions: RoomPositions, transforms: RoomTransforms = {}): RoomPositions {
+  if (!positions || typeof positions !== 'object' || Array.isArray(positions)) throw Error('아이템 위치를 확인해 주세요.')
   const result: RoomPositions = {}
-  for (const id of Object.keys(positions)) {
+  for (const id of new Set([...Object.keys(positions), ...Object.keys(transforms)])) {
     if (!isMovable(id)) throw Error('이동할 수 없는 아이템입니다.')
-    const p = positions[id]
-    if (!p || !Number.isInteger(p.x) || !Number.isInteger(p.y)) throw Error('아이템 위치를 확인해 주세요.')
-    const safe = constrainPosition(id, p)
+    const p = Object.hasOwn(positions, id) ? positions[id] : { x: 0, y: 0 }
+    if (!p || Object.keys(p).length !== 2 || !Number.isInteger(p.x) || !Number.isInteger(p.y)) throw Error('아이템 위치를 확인해 주세요.')
+    const safe = constrainPosition(id, p, roomTransform(transforms, id))
     if (safe.x !== p.x || safe.y !== p.y) throw Error('아이템을 방 안에 배치해 주세요.')
     if (p.x !== 0 || p.y !== 0) result[id] = { x: p.x, y: p.y }
   }

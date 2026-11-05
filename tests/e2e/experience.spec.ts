@@ -10,6 +10,7 @@ test('study and reading, restored timer, rewards and room', async ({ page }, inf
   await page.screenshot({ path: info.outputPath('dashboard.png'), fullPage: true })
   await page.getByRole('link', { name: '학습·독서', exact: true }).click()
   await page.getByRole('button', { name: '등록', exact: true }).click()
+  await page.getByRole('combobox', { name: '등록 유형' }).selectOption('certification')
   await page.getByLabel('자격증 이름').fill('SQLD')
   await page.getByLabel('시험일').fill('2026-12-01')
   await page.getByRole('button', { name: '저장', exact: true }).click()

@@ -1,11 +1,12 @@
 import { useRef, type PointerEvent, type ReactNode } from 'react'
 import { items } from '../domain/model'
-import { constrainPosition, roomItems, roomOrder, roomPosition, type MovableItem, type RoomPosition, type RoomPositions } from '../domain/room'
-export function Room({ placed, positions = {}, editing = false, selected, onSelect, onMove, onLayer, order, label }: {
+import { constrainPosition, roomItems, roomOrder, roomPosition, roomTransform, type MovableItem, type RoomPosition, type RoomPositions, type RoomTransforms } from '../domain/room'
+export function Room({ placed, positions = {}, transforms = {}, editing = false, selected, onSelect, onMove, onLayer, order, label }: {
   placed: string[]; positions?: RoomPositions; editing?: boolean; selected?: MovableItem | null;
   onSelect?: (id: MovableItem) => void; onMove?: (id: MovableItem, position: RoomPosition) => void;
   label?: string;
   order?: MovableItem[]; onLayer?: (id: MovableItem, direction: -1 | 1) => void;
+  transforms?: RoomTransforms;
 }) {
   const svg = useRef<SVGSVGElement>(null)
   const drag = useRef<{ id: MovableItem; pointer: number; start: RoomPosition; position: RoomPosition } | null>(null)
@@ -19,8 +20,11 @@ export function Room({ placed, positions = {}, editing = false, selected, onSele
   function movable(id: MovableItem, children: ReactNode) {
     if (!has(id)) return null
     const position = roomPosition(positions, id), bounds = roomItems[id]
+    const shape = roomTransform(transforms, id), cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2
+    const transform = shape.rotation === 0 && shape.scale === 100 ? undefined : `translate(${cx} ${cy}) rotate(${shape.rotation}) scale(${shape.scale / 100}) translate(${-cx} ${-cy})`
     const name = items.find(item => item.id === id)!.name
     return <g key={id} data-room-item={id} transform={'translate(' + position.x + ' ' + position.y + ')'}
+      data-room-rotation={shape.rotation} data-room-scale={shape.scale}
       className={editing ? 'room-item ' + (selected === id ? 'room-item-selected' : '') : undefined}
       role={editing ? 'button' : undefined} tabIndex={editing ? 0 : undefined}
       aria-label={editing ? name + ' 위치 이동' : undefined} aria-pressed={editing ? selected === id : undefined}
@@ -49,10 +53,10 @@ export function Room({ placed, positions = {}, editing = false, selected, onSele
         event.preventDefault()
         onSelect?.(id)
         const step = event.shiftKey ? 1 : 5
-        onMove?.(id, constrainPosition(id, { x: position.x + direction.x * step, y: position.y + direction.y * step }))
+        onMove?.(id, constrainPosition(id, { x: position.x + direction.x * step, y: position.y + direction.y * step }, shape))
       }}>
-      {editing && <rect className="room-hit-area" x={bounds.x - 3} y={bounds.y - 3} width={bounds.width + 6} height={bounds.height + 6} rx="6" />}
-      {children}
+      {editing && <rect className="room-hit-area" transform={transform} x={bounds.x - 3} y={bounds.y - 3} width={bounds.width + 6} height={bounds.height + 6} rx="6" />}
+      {transform ? <g transform={transform}>{children}</g> : children}
     </g>
   }
   const artwork: Record<MovableItem, ReactNode> = {
@@ -71,7 +75,7 @@ export function Room({ placed, positions = {}, editing = false, selected, onSele
       const current = point(event)
       if (current) onMove?.(active.id, constrainPosition(active.id, {
         x: active.position.x + current.x - active.start.x, y: active.position.y + current.y - active.start.y,
-      }))
+      }, roomTransform(transforms, active.id)))
     }}
     onPointerUp={event => {
       if (drag.current?.pointer !== event.pointerId) return

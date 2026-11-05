@@ -6,8 +6,9 @@ import type { Activity, Certification } from '../domain/model'
 import { useApp, useSnapshot } from '../state/context'
 import { Card, CardTitle, Dialog, Empty, Field, PageTitle, Progress } from '../ui/base'
 import { BookRegistrationDialog } from '../ui/BookRegistrationDialog'
+import { StudyRegistrationDialog } from '../ui/StudyRegistrationDialog'
 
-type Editor = { kind: 'certification'; cert?: Certification } | { kind: 'subject'; cert: Certification } | { kind: 'book' } | { kind: 'log'; activity: Activity }
+type Editor = { kind: 'certification'; cert: Certification } | { kind: 'subject'; cert: Certification } | { kind: 'study' } | { kind: 'book' } | { kind: 'log'; activity: Activity }
 const resultNames = { pending: '준비 중', passed: '합격', failed: '불합격' }
 
 export function Library() {
@@ -17,19 +18,20 @@ export function Library() {
   const { now, run, busy } = useApp()
   const s = useSnapshot()
   const bookList = s.activities.filter(a => a.kind === 'book')
+  const studies = s.activities.filter(a => a.kind === 'subject' && !a.certificationId)
   const recordsFor = (a: Activity) => sum(s.records.filter(r => r.activityId === a.id))
   const close = () => setEditor(null)
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!editor || editor.kind === 'book') return
+    if (!editor || editor.kind === 'book' || editor.kind === 'study') return
     const form = new FormData(e.currentTarget)
     const value = (field: string) => String(form.get(field) ?? '').trim()
     const id = crypto.randomUUID()
     let success: boolean
     if (editor.kind === 'certification') {
       if (!value('name')) return
-      success = await run({ type: 'certification', value: { id: editor.cert?.id ?? id, name: value('name'), examDate: value('date'), result: value('result') as Certification['result'] } }, '자격증을 저장했어요.')
+      success = await run({ type: 'certification', value: { id: editor.cert.id, name: value('name'), examDate: value('date'), result: value('result') as Certification['result'] } }, '자격증을 저장했어요.')
     } else if (editor.kind === 'subject') {
       if (!value('name')) return
       success = await run({ type: 'activity', value: { id, kind: 'subject', name: value('name'), certificationId: editor.cert.id, goalMinutes: Number(value('goal')) } }, '과목을 추가했어요.')
@@ -39,7 +41,7 @@ export function Library() {
     if (success) close()
   }
 
-  const add = <button className="btn btn-primary" onClick={() => setEditor({ kind: books ? 'book' : 'certification' })}><Plus size={17} />{books ? '도서 등록' : '등록'}</button>
+  const add = <button className="btn btn-primary" onClick={() => setEditor({ kind: books ? 'book' : 'study' })}><Plus size={17} />{books ? '도서 등록' : '등록'}</button>
   function activityRow(a: Activity) {
     const book = a.kind === 'book'
     const progress = book ? percent(a.currentPage ?? 0, a.pages ?? 0) : percent(recordsFor(a), (a.goalMinutes ?? 0) * 60)
@@ -57,15 +59,16 @@ export function Library() {
     <PageTitle label="MY LIBRARY" title="학습·독서" description="개인공부와 독서 진도를 한곳에서 관리하세요." action={add} />
     <div className="segmented" aria-label="활동 유형"><button aria-pressed={!books} onClick={() => setParams({})}><GraduationCap size={17} />나의 공부</button><button aria-pressed={books} onClick={() => setParams({ tab: 'books' })}><BookOpen size={17} />나의 서재</button></div>
     {books ? bookList.length ? <div className="grid gap-4 md:grid-cols-2">{bookList.map(a => <Card key={a.id}>{activityRow(a)}</Card>)}</div> : <Card><Empty icon={BookOpen} title="서재가 비어 있어요" description="읽고 싶은 책을 등록하고 한 페이지씩 쌓아보세요." /></Card>
-      : s.certifications.length ? <div className="grid gap-4 lg:grid-cols-2">{s.certifications.map(c => <Card key={c.id}>
+      : studies.length || s.certifications.length ? <div className="grid gap-4 lg:grid-cols-2">{studies.map(a => <Card key={a.id}>{activityRow(a)}</Card>)}{s.certifications.map(c => <Card key={c.id}>
         <CardTitle icon={GraduationCap} title={c.name} sub={c.examDate + ' · ' + resultNames[c.result]} action={<span className="badge">{dDay(c.examDate, now)}</span>} />
         <div className="row-actions"><button className="btn btn-soft" onClick={() => setEditor({ kind: 'subject', cert: c })}><Plus size={16} />과목 추가</button><button className="btn btn-quiet" onClick={() => setEditor({ kind: 'certification', cert: c })}><PencilLine size={15} />수정</button></div>
         {s.activities.some(a => a.certificationId === c.id) ? s.activities.filter(a => a.certificationId === c.id).map(activityRow) : <p className="muted text-sm mt-4">과목을 추가하면 집중 시간과 진도를 연결할 수 있어요.</p>}
-      </Card>)}</div> : <Card><Empty icon={GraduationCap} title="등록된 자격증이 없어요" description="시험 날짜를 정하고 오늘 공부할 과목을 추가해 보세요." /></Card>}
+      </Card>)}</div> : <Card><Empty icon={GraduationCap} title="등록된 공부가 없어요" description="공부할 주제나 과목을 등록하고 나만의 공부를 시작해 보세요." /></Card>}
     {editor?.kind === 'book' && <BookRegistrationDialog close={close} />}
-    {editor && editor.kind !== 'book' && <Dialog title={editor.kind === 'certification' ? editor.cert ? '자격증 수정' : '자격증 등록' : editor.kind === 'subject' ? '과목 추가' : editor.activity.kind === 'book' ? '독서 기록' : '학습 기록'} close={close}>
+    {editor?.kind === 'study' && <StudyRegistrationDialog close={close} />}
+    {editor && editor.kind !== 'book' && editor.kind !== 'study' && <Dialog title={editor.kind === 'certification' ? '자격증 수정' : editor.kind === 'subject' ? '과목 추가' : editor.activity.kind === 'book' ? '독서 기록' : '학습 기록'} close={close}>
       <form className="form-stack" onSubmit={e => void save(e)}>
-        {editor.kind === 'certification' && <><Field label="자격증 이름"><input name="name" required maxLength={80} defaultValue={editor.cert?.name} placeholder="예: 정보처리기사" /></Field><Field label="시험일"><input name="date" type="date" required defaultValue={editor.cert?.examDate} /></Field><Field label="시험 결과"><select name="result" defaultValue={editor.cert?.result ?? 'pending'}>{Object.entries(resultNames).map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></Field></>}
+        {editor.kind === 'certification' && <><Field label="자격증 이름"><input name="name" required maxLength={80} defaultValue={editor.cert.name} placeholder="예: 정보처리기사" /></Field><Field label="시험일"><input name="date" type="date" required defaultValue={editor.cert.examDate} /></Field><Field label="시험 결과"><select name="result" defaultValue={editor.cert.result}>{Object.entries(resultNames).map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></Field></>}
         {editor.kind === 'subject' && <><Field label="과목 이름"><input name="name" required maxLength={80} placeholder="예: 데이터베이스" /></Field><Field label="목표 시간 (분)"><input name="goal" type="number" min="1" max="100000" defaultValue="120" required /></Field></>}
         {editor.kind === 'log' && <><Field label={editor.activity.kind === 'book' ? '현재 읽은 페이지' : '푼 문제 수'}><input name="amount" type="number" min="0" max={editor.activity.pages ?? 100000} required defaultValue={editor.activity.currentPage ?? 0} /></Field><Field label={editor.activity.kind === 'book' ? '독서 노트 / 후기' : '공부한 내용'}><textarea name="text" rows={4} maxLength={2000} /></Field></>}
         <button className="btn btn-primary" disabled={busy}>저장</button>
